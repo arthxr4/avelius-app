@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     const validatedData = inviteSchema.parse(body)
 
     // Construire l'URL de redirection complète
-    const redirectUrl = "https://enormous-calf-57.accounts.dev/sign-up"
+    const redirectUrl = "https://avelius-mjimakf0w-arthurs-projects-42019061.vercel.app/sign-up"
 
     // Créer l'invitation via Clerk
     const response = await fetch("https://api.clerk.com/v1/invitations", {
