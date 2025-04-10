@@ -18,8 +18,12 @@ export async function POST(request: Request) {
     const body = await request.json()
     const validatedData = inviteSchema.parse(body)
 
-    // Construire l'URL de redirection complète
-    const redirectUrl = "https://avelius-mjimakf0w-arthurs-projects-42019061.vercel.app/sign-up"
+    // Construire l'URL de redirection complète en utilisant la variable d'environnement
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL
+    if (!baseUrl) {
+      throw new Error("NEXT_PUBLIC_APP_URL is not defined")
+    }
+    const redirectUrl = `${baseUrl}/sign-up`
 
     // Créer l'invitation via Clerk
     const response = await fetch("https://api.clerk.com/v1/invitations", {
