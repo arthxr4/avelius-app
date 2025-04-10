@@ -1,8 +1,10 @@
 // app/api/create-member/route.ts
 
+import { auth } from "@clerk/nextjs"
+import { clerkClient } from "@clerk/nextjs"
 import { NextResponse } from "next/server"
+import { z } from "zod"
 import { currentUser } from "@clerk/nextjs/server"
-import { clerkClient } from "@clerk/clerk-sdk-node"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 
 export async function POST(req: Request) {
