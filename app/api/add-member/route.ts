@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     const validatedData = inviteSchema.parse(body)
 
     // Construire l'URL de redirection complète
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+    const baseUrl = "https://avelius-fqge2gavh-arthurs-projects-42019061.vercel.app"
     const redirectUrl = `${baseUrl}/sign-up`
 
     // Créer l'invitation via Clerk
