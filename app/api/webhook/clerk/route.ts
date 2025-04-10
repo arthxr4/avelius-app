@@ -5,6 +5,15 @@ import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import { Webhook } from "svix"
 
+// Définir les rôles valides
+const VALID_ROLES = ["admin", "manager", "agent"] as const
+type UserRole = typeof VALID_ROLES[number]
+
+// Fonction pour valider le rôle
+function isValidRole(role: string): role is UserRole {
+  return VALID_ROLES.includes(role as UserRole)
+}
+
 export async function POST(req: Request) {
   // Vérifier la signature du webhook
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET
@@ -57,6 +66,13 @@ export async function POST(req: Request) {
       return new NextResponse("No primary email found", { status: 400 })
     }
 
+    // Valider le rôle
+    const role = public_metadata.role as string
+    if (!isValidRole(role)) {
+      console.error("Invalid role:", role)
+      return new NextResponse("Invalid role", { status: 400 })
+    }
+
     const cookieStore = cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -91,7 +107,7 @@ export async function POST(req: Request) {
           id: id,
           email: primaryEmail,
           status: "active",
-          role: (public_metadata.role as string) || "user"
+          role: role
         })
 
       if (insertError) {
@@ -105,7 +121,7 @@ export async function POST(req: Request) {
         .update({ 
           id: id,
           status: "active",
-          role: (public_metadata.role as string) || "user"
+          role: role
         })
         .eq("email", primaryEmail)
 
