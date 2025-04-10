@@ -1,10 +1,18 @@
 import { auth } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
 import { z } from "zod"
+import { createClient } from "@supabase/supabase-js"
+import { headers } from "next/headers"
+
+// Définir les rôles valides pour correspondre à l'enum Supabase
+type UserRole = "admin" | "manager" | "agent"
+
+// Type pour correspondre à l'enum Supabase
+type UserStatus = "invited" | "active"
 
 const inviteSchema = z.object({
   email: z.string().email(),
-  role: z.enum(["admin", "user"]),
+  role: z.enum(["admin", "manager", "agent"] as const),
 })
 
 export async function POST(request: Request) {
@@ -18,12 +26,13 @@ export async function POST(request: Request) {
     const body = await request.json()
     const validatedData = inviteSchema.parse(body)
 
-    // Construire l'URL de redirection complète en utilisant la variable d'environnement
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL
-    if (!baseUrl) {
-      throw new Error("NEXT_PUBLIC_APP_URL is not defined")
-    }
-    const redirectUrl = `${baseUrl}/sign-up`
+    // Détecter l'environnement et construire l'URL de redirection
+    const headersList = await headers()
+    const host = headersList.get("host") || ""
+    const protocol = process.env.NODE_ENV === "development" ? "http" : "https"
+    const redirectUrl = `${protocol}://${host}/sign-up`
+
+    console.log("Redirect URL:", redirectUrl) // Pour debug
 
     // Créer l'invitation via Clerk
     const response = await fetch("https://api.clerk.com/v1/invitations", {
@@ -41,11 +50,9 @@ export async function POST(request: Request) {
       }),
     })
 
-    const responseData = await response.text()
-    
     if (!response.ok) {
-      // On renvoie directement l'erreur de Clerk au client
-      return new NextResponse(responseData, { 
+      const errorData = await response.text()
+      return new NextResponse(errorData, { 
         status: response.status,
         headers: {
           'Content-Type': 'application/json'
@@ -53,7 +60,50 @@ export async function POST(request: Request) {
       })
     }
 
-    return NextResponse.json({ success: true, invitation: JSON.parse(responseData) })
+    const clerkData = await response.json()
+    const invitationId = clerkData.id
+
+    // Utiliser le client Supabase avec la clé de service
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    )
+
+    // Vérifier si l'utilisateur existe déjà
+    const { data: existingUser } = await supabase
+      .from("users")
+      .select()
+      .eq("email", validatedData.email)
+      .single()
+
+    if (existingUser) {
+      return new NextResponse("User already exists", { status: 400 })
+    }
+
+    // Créer l'utilisateur dans Supabase avec l'ID de l'invitation
+    const { error: insertError } = await supabase
+      .from("users")
+      .insert({
+        id: invitationId,
+        email: validatedData.email,
+        role: validatedData.role,
+        status: "invited" as UserStatus,
+        invited: true,
+        created_at: new Date().toISOString()
+      })
+
+    if (insertError) {
+      console.error("Error creating user in Supabase:", insertError)
+      return new NextResponse("Error creating user", { status: 500 })
+    }
+
+    return NextResponse.json({ success: true, invitation: clerkData })
   } catch (error) {
     console.error("Error:", error)
     if (error instanceof z.ZodError) {

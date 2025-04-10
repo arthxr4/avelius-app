@@ -31,9 +31,12 @@ import {
 import { toast } from "sonner"
 import { PlusIcon } from "lucide-react"
 
+// Type pour correspondre à l'enum Supabase
+type UserRole = "admin" | "manager" | "agent"
+
 const formSchema = z.object({
   email: z.string().email("Email invalide"),
-  role: z.enum(["admin", "user"]),
+  role: z.enum(["admin", "manager", "agent"] as const),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -46,7 +49,7 @@ export function AddMemberDialog() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: "",
-      role: "user",
+      role: "agent",
     },
   })
 
@@ -132,8 +135,9 @@ export function AddMemberDialog() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="user">Utilisateur</SelectItem>
                       <SelectItem value="admin">Administrateur</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="agent">Agent</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

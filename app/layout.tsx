@@ -11,18 +11,13 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata = {
   title: "Avelius - L'agence de prospection",
   description: "L'agence de prospection qui vous aide à trouver des clients",
-    generator: '  Next.js',
+  generator: 'Next.js',
   applicationName: 'Avelius',
   referrer: 'origin-when-cross-origin',
   keywords: ['prospection', 'lead generation', 'marketing'],
   authors: [{ name: 'Avelius' }],
   creator: 'Avelius',
   publisher: 'Avelius',
-  colorScheme: 'light dark',
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#000000' },
-  ],
   openGraph: {
     title: 'Avelius - L\'agence de prospection',
     description: 'L\'agence de prospection qui vous aide à trouver des clients',
@@ -40,7 +35,15 @@ export const metadata = {
     locale: 'fr-FR',
     type: 'website',
   },
-  }
+}
+
+export const viewport = {
+  colorScheme: 'light dark',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#000000' },
+  ],
+}
 
 export default function RootLayout({
   children,
@@ -59,7 +62,5 @@ export default function RootLayout({
     </ClerkProvider>
   )
 }
-
-
 
 import './globals.css'
