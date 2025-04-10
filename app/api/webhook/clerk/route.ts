@@ -76,20 +76,43 @@ export async function POST(req: Request) {
       }
     )
 
-    // Mettre à jour l'utilisateur dans Supabase avec l'ID Clerk
-    const { error } = await supabase
+    // Vérifier si l'utilisateur existe déjà
+    const { data: existingUser } = await supabase
       .from("users")
-      .update({ 
-        id: id,
-        status: "active",
-        email: primaryEmail,
-        role: (public_metadata.role as string) || "user"
-      })
+      .select()
       .eq("email", primaryEmail)
+      .single()
 
-    if (error) {
-      console.error("Error updating user in Supabase:", error)
-      return new NextResponse("Error updating user", { status: 500 })
+    if (!existingUser) {
+      // Si l'utilisateur n'existe pas, le créer
+      const { error: insertError } = await supabase
+        .from("users")
+        .insert({ 
+          id: id,
+          email: primaryEmail,
+          status: "active",
+          role: (public_metadata.role as string) || "user"
+        })
+
+      if (insertError) {
+        console.error("Error creating user in Supabase:", insertError)
+        return new NextResponse("Error creating user", { status: 500 })
+      }
+    } else {
+      // Si l'utilisateur existe, le mettre à jour
+      const { error: updateError } = await supabase
+        .from("users")
+        .update({ 
+          id: id,
+          status: "active",
+          role: (public_metadata.role as string) || "user"
+        })
+        .eq("email", primaryEmail)
+
+      if (updateError) {
+        console.error("Error updating user in Supabase:", updateError)
+        return new NextResponse("Error updating user", { status: 500 })
+      }
     }
   }
 
