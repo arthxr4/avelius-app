@@ -122,6 +122,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
   return (
     <div className="rounded-lg border bg-background p-2 shadow-sm">
+      <div className="text-sm font-medium">{label}</div>
       <div className="flex items-center gap-2 text-sm">
         <div className="h-2 w-2 rounded-full" style={{ backgroundColor: "#2563eb" }} />
         <span className="font-medium">{payload[0]?.value} rendez-vous</span>
@@ -556,6 +557,7 @@ export default function ClientDashboard() {
                     <Tooltip
                       cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
                       content={<CustomTooltip />}
+                      wrapperStyle={{ zIndex: 1000 }}
                     />
                     <Bar
                       dataKey="appointments"
@@ -578,7 +580,7 @@ export default function ClientDashboard() {
               Évolution des rendez-vous créés sur la période
             </div>
           </CardFooter>
-        </Card>
+      </Card>
         <ActiveAppointmentsList appointments={appointments} isLoading={loading} />
       </div>
 
