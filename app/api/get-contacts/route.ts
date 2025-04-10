@@ -4,14 +4,15 @@ import { currentUser } from "@clerk/nextjs/server"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
-export async function POST(req: Request) {
+export async function GET(req: Request) {
   const user = await currentUser()
 
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
   }
 
-  const { client_id } = await req.json()
+  const { searchParams } = new URL(req.url)
+  const client_id = searchParams.get('client_id')
 
   if (!client_id) {
     return NextResponse.json({ error: "Client ID requis" }, { status: 400 })

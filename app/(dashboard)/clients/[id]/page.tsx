@@ -348,76 +348,70 @@ function ActiveAppointmentsList({ appointments, isLoading }: {
 
 export default function ClientDashboard() {
   const params = useParams()
-  const [analytics, setAnalytics] = useState<Analytics>({
-    totalAppointments: 0,
-    totalProspects: 0,
-    noShowRate: 0,
-  })
+  const clientId = params.id as string
+  const [analytics, setAnalytics] = useState<Analytics | null>(null)
   const [appointments, setAppointments] = useState<Appointment[]>([])
-  const [loading, setLoading] = useState(true)
+  const [contacts, setContacts] = useState<Contact[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [selectedView, setSelectedView] = useState<"upcoming" | "past">("upcoming")
   const [chartData, setChartData] = useState<{ week: string; appointments: number }[]>([])
   const [timeRange, setTimeRange] = useState<TimeRange>("1m")
 
+  // Mettre à jour les données du graphique quand les rendez-vous ou la plage de temps changent
   useEffect(() => {
-    if (!params.id || typeof params.id !== 'string') {
-      console.error("Client ID is undefined")
-      return
+    if (appointments.length > 0) {
+      console.log("Appointments data:", appointments)
+      console.log("First appointment created_at:", appointments[0].created_at)
+      const data = groupAppointmentsByWeek(appointments, timeRange)
+      console.log("Chart data:", data)
+      setChartData(data)
     }
+  }, [appointments, timeRange])
 
+  useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true)
-        // Fetch appointments
-        const appointmentsResponse = await fetch(`/api/get-appointments?client_id=${params.id}`)
-        if (!appointmentsResponse.ok) {
-          throw new Error('Failed to fetch appointments')
-        }
-        const appointmentsData = await appointmentsResponse.json()
-        
-        // Fetch contacts
-        const contactsResponse = await fetch(`/api/get-contacts`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ client_id: params.id }),
-        })
-        if (!contactsResponse.ok) {
-          throw new Error('Failed to fetch contacts')
-        }
-        const contactsData = await contactsResponse.json()
+        setIsLoading(true)
+        setError(null)
 
-        // Calculate analytics
-        const now = new Date()
-        const pastAppointments = appointmentsData.filter(
-          (app: Appointment) => new Date(app.date) < now
-        )
-        const noShowAppointments = pastAppointments.filter(
-          (app: Appointment) => app.status === "no_show"
-        )
-        const noShowRate = pastAppointments.length > 0
-          ? (noShowAppointments.length / pastAppointments.length) * 100
-          : 0
+        // Récupérer les données en parallèle
+        const [analyticsRes, appointmentsRes, contactsRes] = await Promise.all([
+          fetch(`/api/get-analytics?client_id=${clientId}`, {
+            next: { revalidate: 60 }, // Cache pendant 1 minute
+          }),
+          fetch(`/api/get-appointments?client_id=${clientId}`, {
+            next: { revalidate: 60 }, // Cache pendant 1 minute
+          }),
+          fetch(`/api/get-contacts?client_id=${clientId}`, {
+            next: { revalidate: 60 }, // Cache pendant 1 minute
+          }),
+        ])
 
-        // Update state
+        if (!analyticsRes.ok || !appointmentsRes.ok || !contactsRes.ok) {
+          throw new Error("Failed to fetch data")
+        }
+
+        const [analyticsData, appointmentsData, contactsData] = await Promise.all([
+          analyticsRes.json(),
+          appointmentsRes.json(),
+          contactsRes.json(),
+        ])
+
+        console.log("Fetched appointments:", appointmentsData)
+        setAnalytics(analyticsData)
         setAppointments(appointmentsData)
-        setChartData(groupAppointmentsByWeek(appointmentsData, timeRange))
-        setAnalytics({
-          totalAppointments: appointmentsData.length,
-          totalProspects: contactsData.length,
-          noShowRate,
-        })
-      } catch (error) {
-        console.error("Error fetching data:", error)
-        toast.error("Erreur lors du chargement des données")
+        setContacts(contactsData)
+      } catch (err) {
+        console.error("Error fetching data:", err)
+        setError("Failed to load data. Please try again later.")
       } finally {
-        setLoading(false)
+        setIsLoading(false)
       }
     }
 
     fetchData()
-  }, [params.id, timeRange])
+  }, [clientId])
 
   // Si l'ID du client n'est pas disponible, afficher un message d'erreur
   if (!params.id || typeof params.id !== 'string') {
@@ -480,21 +474,21 @@ export default function ClientDashboard() {
       <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
         <AnalyticsCard
           title="Total Rendez-vous"
-          value={analytics.totalAppointments}
+          value={analytics?.totalAppointments || 0}
           icon={Calendar}
-          isLoading={loading}
+          isLoading={isLoading}
         />
         <AnalyticsCard
           title="Total Prospects"
-          value={analytics.totalProspects}
+          value={analytics?.totalProspects || 0}
           icon={Users}
-          isLoading={loading}
+          isLoading={isLoading}
         />
         <AnalyticsCard
           title="Taux de No-Show"
-          value={`${analytics.noShowRate.toFixed(1)}%`}
+          value={`${analytics?.noShowRate.toFixed(1) || 0}%`}
           icon={UserX}
-          isLoading={loading}
+          isLoading={isLoading}
         />
       </div>
 
@@ -524,7 +518,7 @@ export default function ClientDashboard() {
             </Select>
           </CardHeader>
           <CardContent className="pt-4">
-            {loading ? (
+            {isLoading ? (
               <div className="h-[350px] w-full">
                 <Skeleton className="h-full w-full" />
               </div>
@@ -581,7 +575,7 @@ export default function ClientDashboard() {
             </div>
           </CardFooter>
       </Card>
-        <ActiveAppointmentsList appointments={appointments} isLoading={loading} />
+        <ActiveAppointmentsList appointments={appointments} isLoading={isLoading} />
       </div>
 
       <div>
@@ -592,7 +586,7 @@ export default function ClientDashboard() {
           onUpdate={handleUpdate}
           selectedView={selectedView}
           onViewChange={(value: "upcoming" | "past") => setSelectedView(value)}
-          isLoading={loading}
+          isLoading={isLoading}
         />
       </div>
     </div>

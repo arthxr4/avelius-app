@@ -14,11 +14,11 @@ export default function ProspectsPage() {
   const [loading, setLoading] = useState(true)
 
   const fetchContacts = async () => {
-    const res = await fetch("/api/get-contacts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ client_id: current?.id }),
-      credentials: "include",
+    const res = await fetch(`/api/get-contacts?client_id=${current?.id}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
     })
     const data = await res.json()
     setContacts(data)
