@@ -34,22 +34,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const navMain = [
     {
       title: "Dashboard",
-      url: `/clients/${current?.id}`,
+      url: current?.id ? `/clients/${current.id}` : "#",
       icon: SquareTerminal,
     },
     {
       title: "Contacts",
-      url: `/clients/${current?.id}/prospects`,
+      url: current?.id ? `/clients/${current.id}/prospects` : "#",
       icon: Bot,
     },
     {
       title: "Sessions de phoning",
-      url: `/clients/${current?.id}/phoning-sessions`,
+      url: current?.id ? `/clients/${current.id}/phoning-sessions` : "#",
       icon: AudioWaveform,
     },
     {
       title: "Rendez-vous",
-      url: `/clients/${current?.id}/meetings`,
+      url: current?.id ? `/clients/${current.id}/meetings` : "#",
       icon: Calendar,
     },
   ]

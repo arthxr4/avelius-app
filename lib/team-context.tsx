@@ -18,18 +18,20 @@ const TeamContext = createContext<{
 })
 
 export function TeamProvider({ children }: { children: React.ReactNode }) {
-  const [current, setCurrent] = useState<Team | null>(() => {
-    // On initialise depuis le localStorage si disponible
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("currentTeam")
-      return saved ? JSON.parse(saved) : null
-    }
-    return null
-  })
+  const [current, setCurrent] = useState<Team | null>(null)
   const [teams, setTeams] = useState<Team[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  // On persiste dans le localStorage à chaque changement
+  // Load saved team from localStorage after mount
+  useEffect(() => {
+    const saved = localStorage.getItem("currentTeam")
+    if (saved) {
+      const savedTeam = JSON.parse(saved)
+      setCurrent(savedTeam)
+    }
+  }, [])
+
+  // Persist to localStorage when current changes
   useEffect(() => {
     if (current) {
       localStorage.setItem("currentTeam", JSON.stringify(current))
@@ -53,19 +55,19 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
 
         setTeams(enrichedClients)
 
-        // Si on a des clients et qu'aucun n'est sélectionné, on prend le premier
+        // If we have clients and no current selection, select the first one
         if (enrichedClients.length > 0 && !current) {
           setCurrent(enrichedClients[0])
         }
       } catch (error) {
-        console.error("Erreur lors du chargement des clients:", error)
+        console.error("Error loading clients:", error)
       } finally {
         setIsLoading(false)
       }
     }
 
     loadTeams()
-  }, []) // On charge les clients une seule fois au montage
+  }, []) // Load clients once on mount
 
   return (
     <TeamContext.Provider value={{ current, setCurrent, teams, isLoading }}>

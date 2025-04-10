@@ -1,25 +1,30 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { AddMemberDialog } from "@/components/add-member-dialog"
-
-type Member = {
-  id: string
-  first_name: string
-  last_name: string
-  email: string
-  role: "admin" | "agent"
-}
+import { Member, columns } from "./columns"
+import { DataTable } from "@/components/members/table"
+import { Skeleton } from "@/components/ui/skeleton"
+import { AddMemberDialog } from "@/components/members/add-member-dialog"
 
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([])
+  const [loading, setLoading] = useState(true)
 
   const fetchMembers = async () => {
-    const res = await fetch("/api/get-members", { credentials: "include" })
-    const data = await res.json()
-    setMembers(data)
+    try {
+      const response = await fetch("/api/get-members", {
+        next: { revalidate: 60 },
+      })
+      if (!response.ok) {
+        throw new Error("Failed to fetch members")
+      }
+      const data = await response.json()
+      setMembers(data)
+    } catch (error) {
+      console.error("Error fetching members:", error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -27,43 +32,19 @@ export default function MembersPage() {
   }, [])
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Membres internes</h1>
-        <AddMemberDialog onAdded={fetchMembers} />
+    <div className="flex-1 space-y-4 p-8 pt-6">
+      <div className="flex items-center justify-between space-y-2">
+        <h2 className="text-3xl font-bold tracking-tight">Membres</h2>
+        <AddMemberDialog />
       </div>
-
-      <Card className="p-4">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left border-b">
-              <th className="py-2">Nom</th>
-              <th className="py-2">Email</th>
-              <th className="py-2">Rôle</th>
-              <th className="py-2 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {members.map((member) => (
-              <tr key={member.id} className="border-b">
-                <td className="py-2">
-                  {member.first_name} {member.last_name}
-                </td>
-                <td className="py-2">{member.email}</td>
-                <td className="py-2">{member.role}</td>
-                <td className="py-2 text-right space-x-2">
-                  <Button variant="outline" size="sm" disabled>
-                    Modifier
-                  </Button>
-                  <Button variant="destructive" size="sm" disabled>
-                    Supprimer
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
+      {loading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-96 w-full" />
+        </div>
+      ) : (
+        <DataTable columns={columns} data={members} />
+      )}
     </div>
   )
 }

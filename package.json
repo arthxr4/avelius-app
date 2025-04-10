@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@clerk/clerk-sdk-node": "^4.13.23",
     "@clerk/nextjs": "^6.14.2",
     "@clerk/types": "^4.52.0",
     "@hookform/resolvers": "^3.9.1",
@@ -55,6 +56,7 @@
     "react-hook-form": "^7.54.1",
     "recharts": "^2.15.0",
     "sonner": "^1.7.4",
+    "svix": "^1.63.1",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.6",
