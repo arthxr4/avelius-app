@@ -26,29 +26,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
+import { Appointment, Contact } from "@/types/appointment"
 
 interface Analytics {
   totalAppointments: number
   totalProspects: number
   noShowRate: number
-}
-
-interface Contact {
-  id: string
-  first_name: string
-  last_name: string
-  email: string
-  phone: string
-  company: string
-}
-
-interface Appointment {
-  id: string
-  contact_id: string
-  status: string
-  date: string
-  created_at: string
-  contacts: Contact
 }
 
 type TimeRange = "1m" | "3m" | "year"
@@ -174,29 +157,58 @@ function getMaxYAxis(data: { appointments: number }[]) {
 
 function AppointmentDialog({ appointment }: { appointment: Appointment }) {
   const [status, setStatus] = useState(appointment.status)
+  const [isUpdating, setIsUpdating] = useState(false)
+
+  const statusConfig = {
+    confirmed: {
+      label: "Confirmé",
+      variant: "default" as const,
+    },
+    canceled: {
+      label: "Annulé",
+      variant: "destructive" as const,
+    },
+    reprogrammed: {
+      label: "Reprogrammé",
+      variant: "secondary" as const,
+    },
+    no_show: {
+      label: "No-show",
+      variant: "destructive" as const,
+    },
+  }
 
   const handleStatusChange = async (newStatus: string) => {
     try {
-      const response = await fetch(`/api/update-appointment-status`, {
-        method: "PUT",
+      setIsUpdating(true)
+      const response = await fetch(`/api/update-appointment`, {
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           id: appointment.id,
+          client_id: appointment.client_id,
+          contact_id: appointment.contact_id,
+          session_id: appointment.session_id,
+          date: appointment.date,
           status: newStatus,
+          added_by: appointment.added_by,
+          created_at: appointment.created_at
         }),
       })
 
-      if (response.ok) {
-        setStatus(newStatus)
-        toast.success("Le statut a été mis à jour")
-      } else {
-        toast.error("Erreur lors de la mise à jour du statut")
+      if (!response.ok) {
+        throw new Error("Erreur lors de la mise à jour du statut")
       }
+
+      setStatus(newStatus)
+      toast.success("Le statut a été mis à jour")
     } catch (error) {
       console.error("Erreur:", error)
       toast.error("Erreur lors de la mise à jour du statut")
+    } finally {
+      setIsUpdating(false)
     }
   }
 
@@ -210,13 +222,9 @@ function AppointmentDialog({ appointment }: { appointment: Appointment }) {
       </DialogHeader>
       <div className="space-y-6 pt-4">
         <div className="space-y-2">
-          <h4 className="font-medium text-sm text-muted-foreground">Contact</h4>
-          <div className="flex items-center gap-4">
-            <Avatar className="h-12 w-12">
-              <AvatarFallback className="bg-primary/10 text-primary text-lg">
-                {appointment.contacts.first_name.charAt(0)}{appointment.contacts.last_name.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
+          
+          <div className="flex items-center gap-4 mb-4">
+            
             <div>
               <p className="font-medium">{appointment.contacts.first_name} {appointment.contacts.last_name}</p>
               <p className="text-sm text-muted-foreground">{appointment.contacts.email}</p>
@@ -234,7 +242,7 @@ function AppointmentDialog({ appointment }: { appointment: Appointment }) {
           </div>
         </div>
         <div className="space-y-2">
-          <h4 className="font-medium text-sm text-muted-foreground">Rendez-vous</h4>
+          
           <div className="space-y-4">
             <div>
               <p className="text-sm text-muted-foreground">Date et heure</p>
@@ -243,29 +251,26 @@ function AppointmentDialog({ appointment }: { appointment: Appointment }) {
               </p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground mb-2">Statut</p>
-              <div className="flex gap-2">
-                <Button 
-                  variant={status === "confirmed" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleStatusChange("confirmed")}
-                >
-                  Confirmé
-                </Button>
-                <Button
-                  variant={status === "rescheduled" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleStatusChange("rescheduled")}
-                >
-                  Reprogrammé
-                </Button>
-                <Button
-                  variant={status === "cancelled" ? "destructive" : "outline"}
-                  size="sm"
-                  onClick={() => handleStatusChange("cancelled")}
-                >
-                  Annulé
-                </Button>
+              <p className="text-sm text-muted-foreground mb-2">Statut actuel</p>
+              <Badge variant={statusConfig[status as keyof typeof statusConfig]?.variant || "default"}>
+                {statusConfig[status as keyof typeof statusConfig]?.label || status}
+              </Badge>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">Changer le statut</p>
+              <div className="grid grid-cols-2 gap-2">
+                {Object.entries(statusConfig).map(([key, config]) => (
+                  <Button
+                    key={key}
+                    variant={status === key ? config.variant : "outline"}
+                    size="sm"
+                    onClick={() => handleStatusChange(key)}
+                    disabled={isUpdating || status === key}
+                    className="w-full"
+                  >
+                    {config.label}
+                  </Button>
+                ))}
               </div>
             </div>
           </div>
@@ -291,9 +296,9 @@ function ActiveAppointmentsList({ appointments, isLoading }: {
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle>Rendez-vous actifs</CardTitle>
+        <CardTitle>Vos prochains rendez-vous</CardTitle>
         <CardDescription>
-          Les 5 prochains rendez-vous à venir
+          Validez vos rendez-vous passés
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -447,10 +452,10 @@ export default function ClientDashboard() {
     }
   }
 
-  const handleUpdate = (updatedAppointment: Appointment) => {
+  const handleUpdate = (updatedAppointment: Partial<Appointment>) => {
     setAppointments((prev) =>
       prev.map((app) =>
-        app.id === updatedAppointment.id ? updatedAppointment : app
+        app.id === updatedAppointment.id ? { ...app, ...updatedAppointment } : app
       )
     )
   }

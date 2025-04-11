@@ -67,38 +67,22 @@ export async function POST(req: Request) {
     console.log("📣 Event type:", eventType)
 
     if (eventType === "user.created") {
-      const { id, email_addresses, public_metadata } = evt.data
-      const primaryEmail = email_addresses[0]?.email_address
+      const { id, email_addresses, primary_email_address_id } = evt.data
 
-      console.log("👤 Processing user creation:", {
-        id,
-        primaryEmail,
-        public_metadata
-      })
+      const email = email_addresses.find(
+        (email) => email.id === primary_email_address_id
+      )?.email_address
 
-      if (!primaryEmail) {
+      if (!email) {
         console.error("❌ No primary email found for user")
         return new NextResponse("No primary email found", { status: 400 })
-      }
-
-      // Valider le rôle
-      const role = public_metadata.role as string
-      if (!isValidRole(role)) {
-        console.error("❌ Invalid role:", role)
-        return new NextResponse("Invalid role", { status: 400 })
-      }
-
-      // Vérifier les variables d'environnement Supabase
-      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-        console.error("❌ Missing Supabase environment variables")
-        return new NextResponse("Missing Supabase configuration", { status: 500 })
       }
 
       console.log("🔑 Creating Supabase client...")
       // Utiliser le client Supabase avec la clé de service
       const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY,
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
         {
           auth: {
             autoRefreshToken: false,
@@ -112,7 +96,7 @@ export async function POST(req: Request) {
       const { data: existingUser, error: selectError } = await supabase
         .from("users")
         .select()
-        .eq("email", primaryEmail)
+        .eq("email", email)
         .single()
 
       if (selectError) {
@@ -121,13 +105,13 @@ export async function POST(req: Request) {
       }
 
       if (!existingUser) {
-        console.error("❌ No user found in Supabase for email:", primaryEmail)
+        console.error("❌ No user found in Supabase for email:", email)
         return new NextResponse("User not found", { status: 404 })
       }
 
       console.log("✅ Found existing user:", existingUser)
 
-      // Mettre à jour l'utilisateur dans Supabase avec le nouvel ID
+      // 1. Mettre à jour l'utilisateur dans Supabase avec le nouvel ID
       const { error: updateError } = await supabase
         .from("users")
         .update({ 
@@ -136,7 +120,7 @@ export async function POST(req: Request) {
           invited: false,
           accepted_at: new Date().toISOString()
         })
-        .eq("email", primaryEmail)
+        .eq("email", email)
 
       if (updateError) {
         console.error("❌ Error updating user in Supabase:", updateError)
@@ -145,10 +129,27 @@ export async function POST(req: Request) {
 
       console.log("✅ Successfully updated user in Supabase:", {
         id,
-        email: primaryEmail,
-        role,
+        email: email,
+        role: existingUser.role,
         status: "active"
       })
+
+      // 2. Mettre à jour les relations dans client_members
+      const { error: memberError } = await supabase
+        .from("client_members")
+        .update({
+          user_id: id,
+          invited: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", email)
+
+      if (memberError) {
+        console.error("Erreur lors de la mise à jour des relations:", memberError)
+        return new NextResponse("Erreur lors de la mise à jour des relations", {
+          status: 500,
+        })
+      }
 
       return new NextResponse(JSON.stringify({ success: true }), {
         status: 200,

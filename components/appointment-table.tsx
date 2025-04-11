@@ -61,22 +61,7 @@ import {
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-
-type Contact = {
-  first_name: string
-  last_name: string
-  email: string
-  phone: string
-  company: string
-}
-
-type Appointment = {
-  id: string
-  contact_id: string
-  status: string
-  date: string
-  contacts: Contact
-}
+import { Appointment, Contact } from "@/types/appointment"
 
 const STATUS_OPTIONS = [
   { value: "confirmed", label: "Confirmé" },

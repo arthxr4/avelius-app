@@ -58,7 +58,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const navProjects = [
     {
       name: "Clients",
-      url: "/clients",
+      url: "/admin/clients-manager",
       icon: PieChart,
     },
     {
