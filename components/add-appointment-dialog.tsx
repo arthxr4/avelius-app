@@ -37,6 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { toast } from "sonner"
 
 interface Contact {
   id: string
@@ -47,9 +48,9 @@ interface Contact {
   company: string
 }
 
-interface Session {
+interface ProspectingList {
   id: string
-  name: string
+  title: string
 }
 
 interface AddAppointmentDialogProps {
@@ -63,8 +64,8 @@ export function AddAppointmentDialog({ clientId, onAppointmentCreated }: AddAppo
   const [contacts, setContacts] = useState<Contact[]>([])
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
   const [date, setDate] = useState<Date>(new Date())
-  const [sessions, setSessions] = useState<Session[]>([])
-  const [selectedSession, setSelectedSession] = useState<string | null>(null)
+  const [lists, setLists] = useState<ProspectingList[]>([])
+  const [selectedList, setSelectedList] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [showCreateContact, setShowCreateContact] = useState(false)
   const [popoverOpen, setPopoverOpen] = useState(false)
@@ -105,53 +106,57 @@ export function AddAppointmentDialog({ clientId, onAppointmentCreated }: AddAppo
     return () => clearTimeout(debounce)
   }, [searchTerm, clientId])
 
-  // Récupération des sessions quand un contact est sélectionné
+  // Récupération des listes quand un contact est sélectionné
   useEffect(() => {
-    const fetchSessions = async () => {
+    const fetchLists = async () => {
       if (!selectedContact) {
-        setSessions([])
-        setSelectedSession(null)
+        setLists([])
+        setSelectedList(null)
         return
       }
 
       try {
-        const response = await fetch("/api/get-contact-sessions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            client_id: clientId,
-            contact_id: selectedContact.id,
-          }),
-        })
-
+        const response = await fetch(`/api/get-prospecting-lists?client_id=${clientId}&contact_id=${selectedContact.id}`)
         if (response.ok) {
           const data = await response.json()
-          setSessions(data)
+          setLists(data)
           
-          // Présélectionner la session si une seule est disponible
+          // Présélectionner la liste si une seule est disponible
           if (data.length === 1) {
-            setSelectedSession(data[0].id)
+            setSelectedList(data[0].id)
           } else {
-            setSelectedSession(null)
+            setSelectedList(null)
           }
         }
       } catch (error) {
-        console.error("Error fetching sessions:", error)
-        setSessions([])
-        setSelectedSession(null)
+        console.error("Error fetching lists:", error)
+        setLists([])
+        setSelectedList(null)
       }
     }
 
-    fetchSessions()
+    fetchLists()
   }, [selectedContact, clientId])
 
   const handleCreateAppointment = async () => {
-    if (!selectedContact || !date || !selectedSession) return
+    if (!selectedContact || !date) {
+      toast.error("Veuillez sélectionner un contact et une date")
+      return
+    }
 
     setIsLoading(true)
     try {
+      // Vérifier si un rendez-vous existe déjà
+      const checkResponse = await fetch(`/api/check-appointment-exists?client_id=${clientId}&contact_id=${selectedContact.id}&date=${date.toISOString()}`)
+      const checkData = await checkResponse.json()
+
+      if (checkData.exists) {
+        toast.error("Un rendez-vous existe déjà pour ce contact à cette date")
+        setIsLoading(false)
+        return
+      }
+
+      // Si pas de doublon, créer le rendez-vous
       const response = await fetch("/api/create-appointment", {
         method: "POST",
         headers: {
@@ -160,28 +165,29 @@ export function AddAppointmentDialog({ clientId, onAppointmentCreated }: AddAppo
         body: JSON.stringify({
           client_id: clientId,
           contact_id: selectedContact.id,
-          session_id: selectedSession,
+          list_id: selectedList,
           date: date.toISOString(),
         }),
       })
 
       if (response.ok) {
         setOpen(false)
+        toast.success("Le rendez-vous a été créé avec succès")
         onAppointmentCreated()
         // Reset form
         setSelectedContact(null)
         setDate(new Date())
-        setSelectedSession(null)
+        setSelectedList(null)
         setSearchTerm("")
         setPopoverOpen(false)
       } else {
         const error = await response.json()
         console.error("Error creating appointment:", error)
-        // TODO: Afficher un toast d'erreur
+        toast.error("Une erreur est survenue lors de la création du rendez-vous")
       }
     } catch (error) {
       console.error("Error creating appointment:", error)
-      // TODO: Afficher un toast d'erreur
+      toast.error("Une erreur est survenue lors de la création du rendez-vous")
     } finally {
       setIsLoading(false)
     }
@@ -191,6 +197,7 @@ export function AddAppointmentDialog({ clientId, onAppointmentCreated }: AddAppo
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>
+          <Plus className="mr-2 h-4 w-4" />
           Ajouter un rendez-vous
         </Button>
       </DialogTrigger>
@@ -198,142 +205,148 @@ export function AddAppointmentDialog({ clientId, onAppointmentCreated }: AddAppo
         <DialogHeader>
           <DialogTitle>Nouveau rendez-vous</DialogTitle>
           <DialogDescription>
-            Ajoutez un nouveau rendez-vous en sélectionnant un contact et une date.
+            Sélectionnez un contact et une date pour le rendez-vous.
           </DialogDescription>
         </DialogHeader>
-
         <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={popoverOpen}
-                  className={cn(
-                    "justify-between",
-                    !selectedContact && "text-muted-foreground"
-                  )}
-                >
-                  {selectedContact ? (
-                    `${selectedContact.first_name} ${selectedContact.last_name}`
-                  ) : (
-                    "Sélectionner un contact"
-                  )}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="p-0" align="start">
-                <Command>
-                  <CommandInput
-                    placeholder="Rechercher un contact..."
-                    value={searchTerm}
-                    onValueChange={setSearchTerm}
-                  />
-                  <CommandEmpty>
-                    {searchTerm.length < 2 ? (
-                      "Entrez au moins 2 caractères..."
-                    ) : showCreateContact ? (
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start"
-                        onClick={() => {
-                          // TODO: Implémenter la création de contact
-                        }}
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Créer un nouveau contact
-                      </Button>
-                    ) : (
-                      "Aucun contact trouvé"
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <h4 className="font-medium leading-none">Contact</h4>
+              <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-full justify-between"
+                  >
+                    {selectedContact
+                      ? `${selectedContact.first_name} ${selectedContact.last_name}`
+                      : "Sélectionner un contact..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput
+                      placeholder="Rechercher un contact..."
+                      value={searchTerm}
+                      onValueChange={setSearchTerm}
+                    />
+                    <CommandEmpty>
+                      {showCreateContact ? (
+                        <p className="p-2 text-sm text-muted-foreground">
+                          Aucun contact trouvé.
+                        </p>
+                      ) : (
+                        <p className="p-2 text-sm text-muted-foreground">
+                          Commencez à taper pour rechercher...
+                        </p>
+                      )}
+                    </CommandEmpty>
+                    {contacts.length > 0 && (
+                      <CommandGroup>
+                        <ScrollArea className="h-[200px]">
+                          {contacts.map((contact) => (
+                            <CommandItem
+                              key={contact.id}
+                              value={`${contact.first_name} ${contact.last_name}`}
+                              onSelect={() => {
+                                setSelectedContact(contact)
+                                setPopoverOpen(false)
+                              }}
+                              className="flex items-center gap-3 px-4 py-2"
+                            >
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                                <span className="text-sm font-medium">
+                                  {contact.first_name[0]}
+                                  {contact.last_name[0]}
+                                </span>
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="font-medium">
+                                  {contact.first_name} {contact.last_name}
+                                </span>
+                                {contact.company && (
+                                  <span className="text-sm text-muted-foreground">
+                                    {contact.company}
+                                  </span>
+                                )}
+                              </div>
+                              <Check
+                                className={cn(
+                                  "ml-auto h-4 w-4",
+                                  selectedContact?.id === contact.id
+                                    ? "opacity-100"
+                                    : "opacity-0"
+                                )}
+                              />
+                            </CommandItem>
+                          ))}
+                        </ScrollArea>
+                      </CommandGroup>
                     )}
-                  </CommandEmpty>
-                  <CommandGroup>
-                    <ScrollArea className="h-72">
-                      {contacts.map((contact) => (
-                        <CommandItem
-                          key={contact.id}
-                          value={`${contact.first_name} ${contact.last_name} ${contact.email} ${contact.phone} ${contact.company}`}
-                          onSelect={() => {
-                            setSelectedContact(contact)
-                            setPopoverOpen(false)
-                            setSearchTerm("")
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              selectedContact?.id === contact.id
-                                ? "opacity-100"
-                                : "opacity-0"
-                            )}
-                          />
-                          <div className="flex flex-col">
-                            <span>
-                              {contact.first_name} {contact.last_name}
-                            </span>
-                            <span className="text-sm text-muted-foreground">
-                              {contact.company} • {contact.email}
-                            </span>
-                          </div>
-                        </CommandItem>
-                      ))}
-                    </ScrollArea>
-                  </CommandGroup>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          </div>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
 
-          <div className="grid gap-2">
-            <DateTimePicker24h
-              date={date}
-              setDate={setDate}
-            />
-          </div>
+            <div className="space-y-2">
+              <h4 className="font-medium leading-none">Liste de prospection</h4>
+              <Select
+                value={selectedList || ""}
+                onValueChange={setSelectedList}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={
+                    lists.length === 0
+                      ? "Aucune liste disponible"
+                      : "Sélectionner une liste"
+                  } />
+                </SelectTrigger>
+                <SelectContent>
+                  {lists.map((list) => (
+                    <SelectItem key={list.id} value={list.id}>
+                      {list.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="grid gap-2">
-            <Select
-              value={selectedSession || ""}
-              onValueChange={setSelectedSession}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={
-                  sessions.length === 0
-                    ? "Aucune session disponible"
-                    : "Sélectionner une session"
-                } />
-              </SelectTrigger>
-              <SelectContent>
-                {sessions.map((session) => (
-                  <SelectItem key={session.id} value={session.id}>
-                    {session.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <h4 className="font-medium leading-none">Date et heure</h4>
+              <DateTimePicker24h
+                date={date}
+                setDate={setDate}
+              />
+            </div>
           </div>
         </div>
 
         <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setOpen(false)
-              setSelectedContact(null)
-              setSearchTerm("")
-              setPopoverOpen(false)
-              setSelectedSession(null)
-            }}
-          >
-            Annuler
-          </Button>
-          <Button
-            onClick={handleCreateAppointment}
-            disabled={!selectedContact || !date || !selectedSession || isLoading}
-          >
-            {isLoading ? "Création..." : "Créer le rendez-vous"}
-          </Button>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setOpen(false)
+                setSelectedContact(null)
+                setDate(new Date())
+                setSelectedList(null)
+                setSearchTerm("")
+                setPopoverOpen(false)
+              }}
+            >
+              Annuler
+            </Button>
+            <Button
+              type="submit"
+              onClick={handleCreateAppointment}
+              disabled={isLoading}
+            >
+              {isLoading ? "Création..." : "Créer le rendez-vous"}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

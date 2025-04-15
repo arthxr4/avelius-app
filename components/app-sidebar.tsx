@@ -13,7 +13,10 @@ import {
   Settings2,
   SquareTerminal,
   Calendar,
+  Home,
+  ListChecks,
 } from "lucide-react"
+import { useUser } from "@clerk/nextjs"
 
 import { NavMain } from "./nav-main"
 import { NavProjects } from "./nav-projects"
@@ -30,27 +33,23 @@ import { useTeam } from "@/lib/team-context"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { current } = useTeam()
+  const { user: clerkUser } = useUser()
 
-  const navMain = [
+  const clientLinks = [
     {
-      title: "Dashboard",
+      title: "Vue d'ensemble",
       url: current?.id ? `/clients/${current.id}` : "#",
-      icon: SquareTerminal,
-    },
-    {
-      title: "Contacts",
-      url: current?.id ? `/clients/${current.id}/prospects` : "#",
-      icon: Bot,
-    },
-    {
-      title: "Sessions de phoning",
-      url: current?.id ? `/clients/${current.id}/phoning-sessions` : "#",
-      icon: AudioWaveform,
+      icon: Home,
     },
     {
       title: "Rendez-vous",
       url: current?.id ? `/clients/${current.id}/meetings` : "#",
       icon: Calendar,
+    },
+    {
+      title: "Listes de prospection",
+      url: current?.id ? `/clients/${current.id}/prospecting-lists` : "#",
+      icon: ListChecks,
     },
   ]
   
@@ -63,15 +62,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     },
     {
       name: "Members",
-      url: "/members",
+      url: "/admin/members",
       icon: Map,
     },
   ].filter(Boolean) // 🔥 on enlève les "false" si `current` est null
 
   const user = {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    name: clerkUser ? `${clerkUser.firstName} ${clerkUser.lastName}` : "",
+    email: clerkUser?.emailAddresses[0]?.emailAddress || "",
+    avatar: clerkUser?.imageUrl || "",
   }
 
   return (
@@ -80,7 +79,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <TeamSwitcher />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={navMain} />
+        <NavMain items={clientLinks} />
         <NavProjects projects={navProjects} />
       </SidebarContent>
       <SidebarFooter>

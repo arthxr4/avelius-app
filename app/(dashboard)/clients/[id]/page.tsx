@@ -4,7 +4,7 @@
 
 import { useParams } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Users, Calendar, UserX, TrendingUp, Eye } from "lucide-react"
+import { Users, Calendar, UserX, TrendingUp, TrendingDown, Eye } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { AppointmentTable } from "@/components/appointment-table"
 import { toast } from "sonner"
@@ -65,29 +65,52 @@ function getDateRangeFromType(type: TimeRange): { start: Date; end: Date } {
 function AnalyticsCard({ 
   title, 
   value, 
+  trend,
+  trendValue,
+  description,
   icon: Icon,
   isLoading 
 }: { 
   title: string
   value: string | number
+  trend?: "up" | "down"
+  trendValue?: string
+  description?: string
   icon: React.ElementType
   isLoading: boolean
 }) {
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">
-          {title}
+    <Card className="@container/card">
+      <CardHeader className="relative">
+        <CardDescription>{title}</CardDescription>
+        <CardTitle className="@[250px]/card:text-3xl text-2xl font-semibold tabular-nums">
+          {isLoading ? <Skeleton className="h-8 w-20" /> : value}
         </CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <Skeleton className="h-8 w-20" />
-        ) : (
-          <div className="text-2xl font-bold">{value}</div>
+        {trendValue && (
+          <div className="absolute right-4 top-4">
+            <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
+              {trend === "up" ? (
+                <TrendingUp className="size-3" />
+              ) : (
+                <TrendingDown className="size-3" />
+              )}
+              {trendValue}
+            </Badge>
+          </div>
         )}
-      </CardContent>
+      </CardHeader>
+      <CardFooter className="flex-col items-start gap-1 text-sm">
+        {description && (
+          <>
+            <div className="line-clamp-1 flex gap-2 font-medium">
+              {description} {trend === "up" ? <TrendingUp className="size-4" /> : <TrendingDown className="size-4" />}
+            </div>
+            <div className="text-muted-foreground">
+              {isLoading ? <Skeleton className="h-4 w-40" /> : "Comparé au mois dernier"}
+            </div>
+          </>
+        )}
+      </CardFooter>
     </Card>
   )
 }
@@ -476,22 +499,31 @@ export default function ClientDashboard() {
 
   return (
     <div className="space-y-8">
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+      <div className="*:data-[slot=card]:shadow-xs grid grid-cols-1 md:grid-cols-3 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card">
         <AnalyticsCard
           title="Total Rendez-vous"
           value={analytics?.totalAppointments || 0}
+          trend="up"
+          trendValue="+12.5%"
+          description="Tendance à la hausse"
           icon={Calendar}
           isLoading={isLoading}
         />
         <AnalyticsCard
           title="Total Prospects"
           value={analytics?.totalProspects || 0}
+          trend="down"
+          trendValue="-20%"
+          description="Acquisition en baisse"
           icon={Users}
           isLoading={isLoading}
         />
         <AnalyticsCard
           title="Taux de No-Show"
           value={`${analytics?.noShowRate.toFixed(1) || 0}%`}
+          trend="up"
+          trendValue="+12.5%"
+          description="Rétention forte"
           icon={UserX}
           isLoading={isLoading}
         />

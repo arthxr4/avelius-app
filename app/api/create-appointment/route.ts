@@ -12,11 +12,11 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { client_id, contact_id, session_id, date } = await req.json()
+    const { client_id, contact_id, list_id, date } = await req.json()
 
-    if (!client_id || !contact_id || !session_id || !date) {
+    if (!client_id || !contact_id || !list_id || !date) {
       return NextResponse.json(
-        { error: "client_id, contact_id, session_id et date sont requis" },
+        { error: "client_id, contact_id, list_id et date sont requis" },
         { status: 400 }
       )
     }
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       .insert({
         client_id,
         contact_id,
-        session_id,
+        list_id,
         date,
         status: "confirmed", // Statut par défaut
         added_by: user.id, // Clerk ID est le même que le sub du JWT

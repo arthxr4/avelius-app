@@ -41,7 +41,11 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>
 
-export function AddMemberDialog() {
+interface AddMemberDialogProps {
+  onSuccess?: () => void
+}
+
+export function AddMemberDialog({ onSuccess }: AddMemberDialogProps) {
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   
@@ -84,6 +88,7 @@ export function AddMemberDialog() {
       toast.success("Invitation envoyée avec succès")
       setOpen(false)
       form.reset()
+      onSuccess?.()
     } catch (error) {
       console.error("Error:", error)
       toast.error(error instanceof Error ? error.message : "Erreur lors de l'envoi de l'invitation")

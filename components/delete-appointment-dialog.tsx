@@ -14,24 +14,35 @@ import { Button } from "@/components/ui/button"
 interface DeleteAppointmentDialogProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: () => void
+  appointmentId?: string
   appointmentDate?: string
+  appointmentCount?: number
+  onConfirm: () => void
 }
 
 export function DeleteAppointmentDialog({
   isOpen,
   onClose,
-  onConfirm,
+  appointmentId,
   appointmentDate,
+  appointmentCount,
+  onConfirm,
 }: DeleteAppointmentDialogProps) {
+  const isBulkDelete = typeof appointmentCount === 'number'
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Supprimer le rendez-vous</DialogTitle>
+          <DialogTitle>
+            {isBulkDelete ? "Supprimer les rendez-vous" : "Supprimer le rendez-vous"}
+          </DialogTitle>
           <DialogDescription>
-            Êtes-vous sûr de vouloir supprimer ce rendez-vous
-            {appointmentDate ? ` du ${appointmentDate}` : ""} ? Cette action est irréversible.
+            {isBulkDelete ? (
+              `Êtes-vous sûr de vouloir supprimer ${appointmentCount} rendez-vous ? Cette action ne peut pas être annulée.`
+            ) : (
+              `Êtes-vous sûr de vouloir supprimer ce rendez-vous du ${appointmentDate} ? Cette action ne peut pas être annulée.`
+            )}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -39,7 +50,7 @@ export function DeleteAppointmentDialog({
             Annuler
           </Button>
           <Button variant="destructive" onClick={onConfirm}>
-            Supprimer
+            {isBulkDelete ? `Supprimer ${appointmentCount} rendez-vous` : "Supprimer"}
           </Button>
         </DialogFooter>
       </DialogContent>

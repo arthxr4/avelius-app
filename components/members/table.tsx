@@ -11,6 +11,7 @@ import {
   getSortedRowModel,
   ColumnFiltersState,
   getFilteredRowModel,
+  RowSelectionState,
 } from "@tanstack/react-table"
 
 import {
@@ -30,19 +31,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useState, useEffect } from "react"
+import { Member } from "@/app/(dashboard)/admin/members/columns"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
+  onRowsSelected?: (rows: Member[]) => void
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  onRowsSelected,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  const [rowSelection, setRowSelection] = React.useState({})
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
 
   const table = useReactTable({
     data,
@@ -59,7 +65,18 @@ export function DataTable<TData, TValue>({
       columnFilters,
       rowSelection,
     },
+    enableRowSelection: true,
   })
+
+  // Update selected rows when selection changes
+  useEffect(() => {
+    if (onRowsSelected) {
+      const selectedRows = table
+        .getFilteredSelectedRowModel()
+        .rows.map((row) => row.original as Member)
+      onRowsSelected(selectedRows)
+    }
+  }, [rowSelection, onRowsSelected, table])
 
   return (
     <div>
@@ -109,9 +126,17 @@ export function DataTable<TData, TValue>({
       <div className="rounded-md border">
         <Table>
           <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
+            <TableRow>
+              <TableHead className="w-[40px] p-0">
+                <Checkbox
+                  checked={table.getIsAllPageRowsSelected()}
+                  onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                  aria-label="Select all"
+                  className="ml-3"
+                />
+              </TableHead>
+              {table.getHeaderGroups().map((headerGroup) => (
+                headerGroup.headers.map((header) => {
                   return (
                     <TableHead key={header.id}>
                       {header.isPlaceholder
@@ -122,9 +147,9 @@ export function DataTable<TData, TValue>({
                           )}
                     </TableHead>
                   )
-                })}
-              </TableRow>
-            ))}
+                })
+              ))}
+            </TableRow>
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
@@ -133,22 +158,24 @@ export function DataTable<TData, TValue>({
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
                 >
+                  <TableCell className="w-[40px] p-0">
+                    <Checkbox
+                      checked={row.getIsSelected()}
+                      onCheckedChange={(value) => row.toggleSelected(!!value)}
+                      aria-label="Select row"
+                      className="ml-3"
+                    />
+                  </TableCell>
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
+                <TableCell colSpan={columns.length + 1} className="h-24 text-center">
                   Aucun résultat.
                 </TableCell>
               </TableRow>

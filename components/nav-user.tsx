@@ -1,7 +1,10 @@
 "use client"
 
-import { BadgeCheck, Bell, ChevronsUpDown, CreditCard, LogOut, Sparkles } from "lucide-react"
+import { ChevronsUpDown, CreditCard, LogOut, Settings } from "lucide-react"
 import { useUser, useClerk } from "@clerk/nextjs"
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
+import { createClient } from "@supabase/supabase-js"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -15,6 +18,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar"
 
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
 export function NavUser({
   user,
 }: {
@@ -27,11 +35,82 @@ export function NavUser({
   const { isMobile } = useSidebar()
   const { user: clerkUser } = useUser()
   const { signOut } = useClerk()
+  const router = useRouter()
+  const [userData, setUserData] = useState<{
+    first_name: string
+    last_name: string
+    avatar_url: string | null
+  } | null>(null)
 
-  // Use Clerk user data if available, otherwise fall back to props
-  const displayName = clerkUser?.firstName ? `${clerkUser.firstName} ${clerkUser.lastName || ""}` : user.name
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!clerkUser?.emailAddresses[0]?.emailAddress) return
+
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('first_name, last_name, avatar_url')
+          .eq('email', clerkUser.emailAddresses[0].emailAddress)
+          .single()
+
+        if (error) {
+          console.error('Error fetching user data:', error)
+          return
+        }
+
+        if (data) {
+          // Générer une URL signée si nous avons un avatar_url
+          let fullAvatarUrl = data.avatar_url
+          if (data.avatar_url) {
+            // Extraire le chemin relatif de l'URL complète si nécessaire
+            const path = data.avatar_url.includes('avatars/') 
+              ? data.avatar_url.split('avatars/')[1]
+              : data.avatar_url
+
+            const { data: signedData } = await supabase.storage
+              .from('avatars')
+              .createSignedUrl(path, 60 * 60 * 24) // URL valide 24h
+
+            if (signedData) {
+              fullAvatarUrl = signedData.signedUrl
+            }
+          }
+
+          setUserData({
+            ...data,
+            avatar_url: fullAvatarUrl
+          })
+        }
+      } catch (error) {
+        console.error('Error:', error)
+      }
+    }
+
+    fetchUserData()
+  }, [clerkUser?.emailAddresses])
+
+  useEffect(() => {
+    if (userData) {
+      console.log('User data loaded:', {
+        name: `${userData.first_name} ${userData.last_name}`,
+        avatar: userData.avatar_url
+      })
+    }
+  }, [userData])
+
+  // Use Supabase user data if available, otherwise fall back to Clerk, then to props
+  const displayName = userData 
+    ? `${userData.first_name} ${userData.last_name}` 
+    : clerkUser?.firstName 
+      ? `${clerkUser.firstName} ${clerkUser.lastName || ""}` 
+      : user.name
   const email = clerkUser?.emailAddresses[0]?.emailAddress || user.email
-  const avatarUrl = clerkUser?.imageUrl || user.avatar
+  const avatarUrl = userData?.avatar_url || clerkUser?.imageUrl || user.avatar
+
+  const handleSignOut = async () => {
+    await signOut()
+    router.push("/sign-in")
+  }
 
   return (
     <SidebarMenu>
@@ -73,30 +152,19 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <Sparkles />
-                Upgrade to Pro
+              <DropdownMenuItem onClick={() => router.push("/settings")}>
+                <Settings className="mr-2 h-4 w-4" />
+                Paramètres
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/billing")}>
+                <CreditCard className="mr-2 h-4 w-4" />
+                Facturation
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <BadgeCheck />
-                Account
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <CreditCard />
-                Billing
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Bell />
-                Notifications
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => signOut()}>
-              <LogOut />
-              Log out
+            <DropdownMenuItem onClick={handleSignOut}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Déconnexion
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

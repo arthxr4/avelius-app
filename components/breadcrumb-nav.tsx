@@ -5,12 +5,13 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { useTeam } from "@/lib/team-context"
 import { useUser } from "@clerk/nextjs"
 
-const breadcrumbTitles: { [key: string]: string } = {
+const segmentLabels: Record<string, string> = {
   clients: "Clients",
-  "phoning-sessions": "Sessions de phoning",
   meetings: "Rendez-vous",
-  prospects: "Prospects",
-  dashboard: "Accueil",
+  "prospecting-lists": "Listes de prospection",
+  settings: "Paramètres",
+  admin: "Administration",
+  "clients-manager": "Gestion des clients",
 }
 
 export function BreadcrumbNav() {
@@ -49,7 +50,7 @@ export function BreadcrumbNav() {
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbPage>
-              {breadcrumbTitles[segments[segments.length - 1]] || segments[segments.length - 1]}
+              {segmentLabels[segments[segments.length - 1]] || segments[segments.length - 1]}
             </BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
@@ -76,7 +77,7 @@ export function BreadcrumbNav() {
               <BreadcrumbSeparator />
               <BreadcrumbItem>
                 <BreadcrumbPage>
-                  {breadcrumbTitles[segments[segments.length - 1]] || segments[segments.length - 1]}
+                  {segmentLabels[segments[segments.length - 1]] || segments[segments.length - 1]}
                 </BreadcrumbPage>
               </BreadcrumbItem>
             </>
@@ -110,12 +111,12 @@ export function BreadcrumbNav() {
             <BreadcrumbItem key={path}>
               {isLast ? (
                 <BreadcrumbPage>
-                  {breadcrumbTitles[segment] || segment}
+                  {segmentLabels[segment] || segment}
                 </BreadcrumbPage>
               ) : (
                 <>
                   <BreadcrumbLink href={path}>
-                    {breadcrumbTitles[segment] || segment}
+                    {segmentLabels[segment] || segment}
                   </BreadcrumbLink>
                   <BreadcrumbSeparator />
                 </>

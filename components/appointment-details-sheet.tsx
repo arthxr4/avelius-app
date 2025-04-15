@@ -39,6 +39,7 @@ type Contact = {
 
 type Appointment = {
   id: string
+  client_id: string
   contact_id: string
   status: string
   date: string
@@ -79,33 +80,43 @@ export function AppointmentDetailsSheet({
 
     setIsUpdating(true)
     try {
-      const response = await fetch("/api/update-appointment", {
+      console.log("Envoi de la requête avec les données:", {
+        id: appointment.id,
+        client_id: appointment.client_id,
+        contact_id: appointment.contact_id,
+        date: selectedDate.toISOString(),
+        status,
+      })
+      
+      const response = await fetch("/api/update-appointment/", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include",
         body: JSON.stringify({
           id: appointment.id,
+          client_id: appointment.client_id,
+          contact_id: appointment.contact_id,
           date: selectedDate.toISOString(),
           status,
         }),
       })
 
+      console.log("Status de la réponse:", response.status)
+      const responseData = await response.json()
+      console.log("Données de la réponse:", responseData)
+
       if (response.ok) {
-        const updatedAppointment = await response.json()
         onUpdate({
           ...appointment,
-          ...updatedAppointment,
           date: selectedDate.toISOString(),
           status,
         })
         toast.success("Rendez-vous mis à jour avec succès")
         onOpenChange(false)
       } else {
-        const error = await response.json()
-        console.error("Erreur lors de la mise à jour:", error)
-        toast.error("Erreur lors de la mise à jour du rendez-vous")
+        console.error("Erreur lors de la mise à jour:", responseData)
+        toast.error(responseData.error || "Erreur lors de la mise à jour du rendez-vous")
       }
     } catch (error) {
       console.error("Erreur:", error)

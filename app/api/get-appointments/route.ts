@@ -17,30 +17,6 @@ export async function GET(req: Request) {
 
   const supabase = await createServerSupabaseClient()
 
-  // Vérifions la structure de la table
-  const { data: tableInfo, error: tableError } = await supabase
-    .from("appointments")
-    .select("*")
-    .limit(1)
-
-  if (tableError) {
-    console.error("❌ Table error:", tableError.message)
-    console.error("❌ Table error details:", tableError)
-  }
-
-  // Essayons une requête sans filtre pour voir tous les rendez-vous
-  const { data: allAppointments, error: allError } = await supabase
-    .from("appointments")
-    .select("*")
-
-  if (allError) {
-    console.error("❌ All appointments error:", allError.message)
-    console.error("❌ All appointments error details:", allError)
-  }
-
-  console.log("📊 Total appointments in DB:", allAppointments?.length || 0)
-  console.log("📊 First appointment raw data:", allAppointments?.[0])
-
   // Requête principale avec le filtre client_id
   const { data, error } = await supabase
     .from("appointments")
@@ -48,7 +24,7 @@ export async function GET(req: Request) {
       id,
       client_id,
       contact_id,
-      session_id,
+      list_id,
       date,
       status,
       added_by,
@@ -65,8 +41,7 @@ export async function GET(req: Request) {
     .order("date", { ascending: true })
 
   if (error) {
-    console.error("❌ Main query error:", error.message)
-    console.error("❌ Main query error details:", error)
+    console.error("❌ Error fetching appointments:", error.message)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
