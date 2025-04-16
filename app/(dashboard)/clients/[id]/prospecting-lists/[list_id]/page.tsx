@@ -1,26 +1,30 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, use } from "react"
 import { useCurrentClient } from "@/hooks/use-current-client"
 import { ProspectingListContactsTable } from "@/components/prospecting/list-contacts-table"
 import { ImportContactsDialog } from "@/components/prospecting/import-contacts-dialog"
 
-interface Props {
-  params: {
-    id: string
-    list_id: string
-  }
+interface RouteParams {
+  id: string
+  list_id: string
 }
 
-export default function ProspectingListDetailsPage({ params }: Props) {
+interface Props {
+  params: Promise<RouteParams>
+}
+
+export default function ProspectingListDetailsPage({ params: paramsPromise }: Props) {
+  const params = use(paramsPromise) as RouteParams
   const { current } = useCurrentClient()
   const [loading, setLoading] = useState(true)
   const [list, setList] = useState<any>(null)
+  const { id, list_id } = params
 
   useEffect(() => {
     const fetchList = async () => {
       try {
-        const res = await fetch(`/api/get-prospecting-list?id=${params.list_id}`)
+        const res = await fetch(`/api/get-prospecting-list?id=${list_id}`)
         if (!res.ok) throw new Error("Erreur lors de la récupération de la liste")
         const data = await res.json()
         setList(data)
@@ -31,10 +35,10 @@ export default function ProspectingListDetailsPage({ params }: Props) {
       }
     }
 
-    if (params.list_id) {
+    if (list_id) {
       fetchList()
     }
-  }, [params.list_id])
+  }, [list_id])
 
   if (!current || !list) return null
 
@@ -42,12 +46,12 @@ export default function ProspectingListDetailsPage({ params }: Props) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{list.title}</h1>
-        <ImportContactsDialog listId={params.list_id} onImported={() => setLoading(true)} />
+        <ImportContactsDialog listId={list_id} onImported={() => setLoading(true)} />
       </div>
 
       <ProspectingListContactsTable
-        clientId={params.id}
-        listId={params.list_id}
+        clientId={id}
+        listId={list_id}
       />
     </div>
   )

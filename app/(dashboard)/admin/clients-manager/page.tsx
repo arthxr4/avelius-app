@@ -136,10 +136,20 @@ function ClientsTable({
     },
     {
       accessorKey: "members_count",
-      header: "Membres",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Membres
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
       cell: ({ row }) => (
         <Badge variant="secondary" className="font-mono">
-          {row.getValue("members_count")}
+          {row.getValue("members_count") || 0}
         </Badge>
       ),
     },
@@ -438,24 +448,42 @@ export default function ClientsManagerPage() {
   const [loading, setLoading] = React.useState(true)
 
   React.useEffect(() => {
-    const fetchClients = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch("/api/get-clients")
-        const responseData = await response.json()
+        setLoading(true)
         
-        if (response.ok) {
-          setData(responseData)
-        } else {
-          console.error("❌ API Error:", responseData.error)
+        // Fetch clients
+        const clientsResponse = await fetch("/api/get-clients")
+        const clientsData = await clientsResponse.json()
+        
+        if (!clientsResponse.ok) {
+          throw new Error("Failed to fetch clients")
         }
+
+        // Fetch members count
+        const membersCountResponse = await fetch("/api/get-clients-members-count")
+        const membersCountData = await membersCountResponse.json()
+        
+        if (!membersCountResponse.ok) {
+          throw new Error("Failed to fetch members count")
+        }
+
+        // Combine the data
+        const enrichedData = clientsData.map((client: Client) => ({
+          ...client,
+          members_count: membersCountData[client.id] || 0
+        }))
+
+        setData(enrichedData)
       } catch (error) {
-        console.error("❌ Fetch error:", error)
+        console.error("❌ Error:", error)
+        toast.error("Erreur lors du chargement des données")
       } finally {
         setLoading(false)
       }
     }
 
-    fetchClients()
+    fetchData()
   }, [])
 
   const handleDelete = async (clientId: string) => {

@@ -1,94 +1,68 @@
 "use client"
 
-import { useState } from "react"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
+import * as React from "react"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { DatePicker } from "@/components/ui/date-picker"
-import { cn } from "@/lib/utils"
-import { type SessionContact } from "./list-contacts-table"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { toast } from "sonner"
+import { DateTimePicker } from "@/components/ui/date-time-picker"
 
-interface AddAppointmentDialogProps {
-  clientId: string
-  listId: string
-  onCreated?: () => void
-  contact?: SessionContact
-  trigger?: React.ReactNode
+interface Contact {
+  id: string
+  first_name: string
+  last_name: string
+  email: string
+  phone: string
+  company: string
 }
 
-export function AddAppointmentDialog({
-  clientId,
-  listId,
-  onCreated,
-  contact,
-  trigger,
-}: AddAppointmentDialogProps) {
-  const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [search, setSearch] = useState("")
-  const [date, setDate] = useState<Date>()
-  const [results, setResults] = useState<any[]>([])
-  const [selectedContact, setSelectedContact] = useState<any>(contact || null)
+interface Props {
+  clientId: string
+  listId: string
+  contact: Contact
+  trigger: React.ReactNode
+}
 
-  async function handleSearch(value: string) {
-    setSearch(value)
-    if (!value) {
-      setResults([])
+export function AddAppointmentDialog({ clientId, listId, contact, trigger }: Props) {
+  const [open, setOpen] = React.useState(false)
+  const [date, setDate] = React.useState<Date>()
+  const [loading, setLoading] = React.useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!date) {
+      toast.error("Veuillez sélectionner une date et heure")
       return
     }
 
     try {
-      const response = await fetch(
-        `/api/search-contacts?query=${value}&list_id=${listId}`
-      )
-      const data = await response.json()
-      setResults(data)
-    } catch (error) {
-      console.error("❌ Erreur:", error)
-      toast.error("Erreur lors de la recherche des contacts")
-    }
-  }
+      setLoading(true)
 
-  async function handleSubmit() {
-    if (!selectedContact || !date) {
-      toast.error("Veuillez sélectionner un contact et une date")
-      return
-    }
-
-    setLoading(true)
-
-    try {
-      const response = await fetch("/api/create-appointment", {
+      const res = await fetch("/api/create-appointment", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           client_id: clientId,
-          contact_id: selectedContact.id,
+          contact_id: contact.id,
           list_id: listId,
           date: date.toISOString(),
         }),
       })
 
-      if (!response.ok) {
-        throw new Error("Erreur lors de la création du rendez-vous")
-      }
+      if (!res.ok) throw new Error("Erreur lors de la création du rendez-vous")
 
       toast.success("Rendez-vous créé avec succès")
       setOpen(false)
-      onCreated?.()
     } catch (error) {
-      console.error("❌ Erreur:", error)
+      console.error("Error:", error)
       toast.error("Erreur lors de la création du rendez-vous")
     } finally {
       setLoading(false)
@@ -97,71 +71,58 @@ export function AddAppointmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button variant="ghost" size="sm">
-            Ajouter un rendez-vous
-          </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogContent className="sm:max-w-[425px] overflow-visible">
         <DialogHeader>
-          <DialogTitle>Ajouter un rendez-vous</DialogTitle>
+          <DialogTitle>Nouveau rendez-vous</DialogTitle>
           <DialogDescription>
-            Recherchez un contact et sélectionnez une date pour le rendez-vous.
+            Planifier un rendez-vous avec ce contact.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Input
-              placeholder="Rechercher un contact..."
-              value={search}
-              onChange={(e) => handleSearch(e.target.value)}
-            />
-            {results.length > 0 && (
-              <div className="border rounded-md divide-y">
-                {results.map((contact) => (
-                  <button
-                    key={contact.id}
-                    className={cn(
-                      "w-full text-left px-4 py-2 hover:bg-muted/50 transition-colors",
-                      selectedContact?.id === contact.id && "bg-muted"
-                    )}
-                    onClick={() => setSelectedContact(contact)}
-                  >
-                    <div className="font-medium">{contact.name}</div>
+        <div className="max-h-[80vh] overflow-y-auto pr-6 -mr-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4 py-2 pb-4">
+              <div className="space-y-2">
+                <Label>Contact sélectionné</Label>
+                <div className="rounded-lg border p-3 space-y-2">
+                  <div className="font-medium">
+                    {contact.first_name} {contact.last_name}
+                  </div>
+                  {contact.company && (
                     <div className="text-sm text-muted-foreground">
-                      {contact.phone}
+                      {contact.company}
                     </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          {selectedContact && (
-            <div className="space-y-2">
-              <div className="text-sm font-medium">Contact sélectionné</div>
-              <div className="p-4 rounded-md bg-muted">
-                <div className="font-medium">{selectedContact.name}</div>
-                <div className="text-sm text-muted-foreground">
-                  {selectedContact.phone}
+                  )}
+                  <div className="text-sm space-y-1">
+                    {contact.email && (
+                      <div className="text-muted-foreground">
+                        {contact.email}
+                      </div>
+                    )}
+                    {contact.phone && (
+                      <div className="text-muted-foreground">
+                        {contact.phone}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <Label>Date et heure du rendez-vous</Label>
+                <DateTimePicker 
+                  date={date} 
+                  onSelect={setDate}
+                />
+              </div>
             </div>
-          )}
-          <div className="space-y-2">
-            <div className="text-sm font-medium">Date du rendez-vous</div>
-            <DatePicker date={date} onSelect={setDate} />
-          </div>
+            <DialogFooter>
+              <Button type="submit" disabled={loading || !date}>
+                {loading ? "Création..." : "Créer le rendez-vous"}
+              </Button>
+            </DialogFooter>
+          </form>
         </div>
-        <DialogFooter>
-          <Button
-            onClick={handleSubmit}
-            disabled={!selectedContact || !date || loading}
-          >
-            {loading ? "Création..." : "Créer le rendez-vous"}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

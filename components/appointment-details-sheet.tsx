@@ -19,7 +19,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { useState, useEffect } from "react"
-import { DateTimePicker24h } from "@/components/ui/date-time-picker"
+import { DateTimePicker } from "@/components/ui/date-time-picker"
 
 const STATUS_OPTIONS = [
   { value: "confirmed", label: "Confirmé" },
@@ -165,11 +165,11 @@ export function AppointmentDetailsSheet({
               </div>
             </div>
           </div>
-          <div className="grid gap-2">
+          <div className="space-y-2">
             <Label>Date et heure</Label>
-            <DateTimePicker24h
-              date={selectedDate}
-              setDate={setSelectedDate}
+            <DateTimePicker 
+              date={selectedDate} 
+              onSelect={(newDate) => newDate && setSelectedDate(newDate)}
             />
           </div>
           <div className="grid gap-2">

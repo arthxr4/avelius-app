@@ -66,6 +66,11 @@ interface Props {
   listId: string
 }
 
+const truncateText = (text: string, maxLength: number = 25) => {
+  if (!text) return ""
+  return text.length > maxLength ? text.slice(0, maxLength) + "..." : text
+}
+
 export function ProspectingListContactsTable({ clientId, listId }: Props) {
   const [data, setData] = React.useState<SessionContact[]>([])
   const [loading, setLoading] = useState(true)
@@ -112,29 +117,31 @@ export function ProspectingListContactsTable({ clientId, listId }: Props) {
       ),
       enableSorting: false,
       enableHiding: false,
+      size: 40,
     },
     {
-      accessorKey: "first_name",
-      header: "Prénom",
+      id: "full_name",
+      header: "Nom complet",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <div className="font-medium capitalize">{row.original.first_name}</div>
+          <div className="font-medium capitalize w-[200px]">
+            {row.original.first_name} {row.original.last_name}
+          </div>
         </div>
       ),
-    },
-    {
-      accessorKey: "last_name",
-      header: "Nom",
-      cell: ({ row }) => <div className="font-medium capitalize">{row.original.last_name}</div>,
+      size: 200,
     },
     {
       accessorKey: "email",
       header: "Email",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <div className="text-muted-foreground">{row.original.email}</div>
+          <div className="text-muted-foreground w-[250px] truncate" title={row.original.email}>
+            {row.original.email}
+          </div>
         </div>
       ),
+      size: 250,
     },
     {
       accessorKey: "phone",
@@ -143,24 +150,30 @@ export function ProspectingListContactsTable({ clientId, listId }: Props) {
         const phone = row.getValue("phone") as string
         if (!phone) return null
         return (
-          <a
-            href={`tel:${phone}`}
-            className="flex items-center gap-1.5 text-muted-foreground hover:text-primary"
-          >
-            <Phone className="h-3.5 w-3.5" />
-            {phone}
-          </a>
+          <div className="w-[150px]">
+            <a
+              href={`tel:${phone}`}
+              className="flex items-center gap-1.5 text-muted-foreground hover:text-primary"
+            >
+              <Phone className="h-3.5 w-3.5" />
+              {phone}
+            </a>
+          </div>
         )
       },
+      size: 150,
     },
     {
       accessorKey: "company",
       header: "Société",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <div>{row.original.company}</div>
+          <div className="w-[200px] truncate" title={row.original.company}>
+            {truncateText(row.original.company)}
+          </div>
         </div>
       ),
+      size: 200,
     },
     {
       id: "appointment_status",
@@ -170,24 +183,27 @@ export function ProspectingListContactsTable({ clientId, listId }: Props) {
         const hasAppointment = contact.has_appointment
 
         return (
-          <Badge 
-            variant={hasAppointment ? "default" : "outline"} 
-            className="flex items-center gap-1.5"
-          >
-            {hasAppointment ? (
-              <>
-                <Calendar className="h-3.5 w-3.5" />
-                RDV pris
-              </>
-            ) : (
-              <>
-                <CalendarX className="h-3.5 w-3.5" />
-                Sans RDV
-              </>
-            )}
-          </Badge>
+          <div className="w-[100px]">
+            <Badge 
+              variant="outline"
+              className="flex items-center gap-1.5"
+            >
+              {hasAppointment ? (
+                <>
+                  <Calendar className="h-3.5 w-3.5 text-green-500" />
+                  <span className="text-muted-foreground">RDV pris</span>
+                </>
+              ) : (
+                <>
+                  <CalendarX className="h-3.5 w-3.5 text-orange-500" />
+                  <span className="text-muted-foreground">Sans RDV</span>
+                </>
+              )}
+            </Badge>
+          </div>
         )
       },
+      size: 120,
     },
     {
       id: "actions",
@@ -195,7 +211,7 @@ export function ProspectingListContactsTable({ clientId, listId }: Props) {
         const contact = row.original
 
         return (
-          <div className="flex justify-end">
+          <div className="flex justify-end w-[50px]">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-8 w-8 p-0">
@@ -226,6 +242,7 @@ export function ProspectingListContactsTable({ clientId, listId }: Props) {
           </div>
         )
       },
+      size: 50,
     },
   ]
 

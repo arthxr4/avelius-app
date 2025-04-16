@@ -19,7 +19,7 @@ import {
   Row,
   Column,
 } from "@tanstack/react-table"
-
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Table,
   TableBody,
@@ -144,8 +144,6 @@ interface TableProps {
   isLoading: boolean
   onDelete: (id: string) => void
   onUpdate: (appointment: Appointment) => void
-  onViewChange: (view: "upcoming" | "past") => void
-  selectedView: "upcoming" | "past"
 }
 
 export function AppointmentTable({
@@ -153,8 +151,6 @@ export function AppointmentTable({
   isLoading,
   onDelete,
   onUpdate,
-  onViewChange,
-  selectedView,
 }: TableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -222,7 +218,7 @@ export function AppointmentTable({
     },
     {
       accessorKey: "date",
-      header: ({ column }: { column: Column<Appointment> }) => {
+      header: ({ column }) => {
         return (
           <Button
             variant="ghost"
@@ -233,9 +229,18 @@ export function AppointmentTable({
           </Button>
         )
       },
-      cell: ({ row }: { row: Row<Appointment> }) => {
+      cell: ({ row }) => {
         const date = new Date(row.getValue("date"))
-        return format(date, "PPP 'à' HH'h'mm", { locale: fr })
+        return (
+          <div className="flex flex-col">
+            <div className="font-medium">
+              {format(date, "d MMMM yyyy", { locale: fr })}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {format(date, "HH:mm", { locale: fr })}
+            </div>
+          </div>
+        )
       },
     },
     {
@@ -327,79 +332,6 @@ export function AppointmentTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex flex-1 items-center space-x-2">
-          <Select
-            value={selectedView}
-            onValueChange={onViewChange}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="upcoming">Rendez-vous à venir</SelectItem>
-              <SelectItem value="past">Rendez-vous passés</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center gap-2">
-          {table.getFilteredSelectedRowModel().rows.length > 0 && (
-            <Button 
-              variant="destructive" 
-              size="sm"
-              onClick={handleBulkDeleteClick}
-            >
-              <Trash className="mr-2 h-4 w-4" />
-              Supprimer la sélection
-            </Button>
-          )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="ml-auto">
-                <ColumnsIcon className="mr-2 h-4 w-4" />
-                Colonnes
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {table
-                .getAllColumns()
-                .filter(
-                  (column) =>
-                    typeof column.accessorFn !== "undefined" && column.getCanHide()
-                )
-                .map((column) => {
-                  let columnLabel = column.id
-                  switch (column.id) {
-                    case "contacts":
-                      columnLabel = "Nom et prénom"
-                      break
-                    case "contacts.email":
-                      columnLabel = "Email"
-                      break
-                    case "date":
-                      columnLabel = "Date et heure"
-                      break
-                    case "status":
-                      columnLabel = "Statut"
-                      break
-                  }
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) =>
-                        column.toggleVisibility(!!value)
-                      }
-                    >
-                      {columnLabel}
-                    </DropdownMenuCheckboxItem>
-                  )
-                })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -577,7 +509,6 @@ export default function MeetingsPage() {
   const params = useParams()
   const [appointments, setAppointments] = React.useState<Appointment[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
-  const [selectedView, setSelectedView] = React.useState<"upcoming" | "past">("upcoming")
   const [cache, setCache] = React.useState<Record<string, Appointment[]>>({})
 
   // Afficher le skeleton immédiatement
@@ -645,69 +576,54 @@ export default function MeetingsPage() {
   }
 
   const now = new Date()
-  const filteredAppointments = appointments.filter((appointment) => {
+  const upcomingAppointments = appointments.filter((appointment) => {
     const appointmentDate = new Date(appointment.date)
-    return selectedView === "upcoming" 
-      ? appointmentDate > now 
-      : appointmentDate <= now
-  }).sort((a, b) => {
-    const dateA = new Date(a.date).getTime()
-    const dateB = new Date(b.date).getTime()
-    return selectedView === "upcoming" 
-      ? dateA - dateB  // Chronologique pour les rendez-vous à venir
-      : dateB - dateA  // Anti-chronologique pour les rendez-vous passés
+    return appointmentDate >= now
+  })
+  const pastAppointments = appointments.filter((appointment) => {
+    const appointmentDate = new Date(appointment.date)
+    return appointmentDate < now
   })
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 p-8">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Vos rendez-vous</h2>
-          {isLoading ? (
-            <div className="mt-1">
-              <Skeleton className="h-4 w-[100px]" />
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground mt-1">
-              {filteredAppointments.length} rendez-vous au total
-            </p>
-          )}
-        </div>
-        
+        <h2 className="text-2xl font-bold">Vos rendez-vous</h2>
         <AddAppointmentDialog
           clientId={params.id as string}
           onAppointmentCreated={() => {
-            // Recharger les rendez-vous après la création
             setIsLoading(true)
-            const fetchAppointments = async () => {
-              try {
-                const response = await fetch(`/api/get-appointments?client_id=${params.id}`)
-                const responseData = await response.json()
-                
-                if (response.ok) {
-                  setAppointments(responseData)
-                } else {
-                  console.error("❌ API Error:", responseData.error)
-                }
-              } catch (error) {
-                console.error("❌ Fetch error:", error)
-              } finally {
-                setIsLoading(false)
-              }
-            }
             fetchAppointments()
           }}
         />
       </div>
 
-      <AppointmentTable
-        data={filteredAppointments}
-        isLoading={isLoading}
-        onDelete={handleDelete}
-        onUpdate={handleUpdate}
-        onViewChange={setSelectedView}
-        selectedView={selectedView}
-      />
+      <Tabs defaultValue="upcoming" className="w-full">
+        <TabsList className="grid w-[400px] grid-cols-2">
+          <TabsTrigger value="upcoming">
+            À venir ({upcomingAppointments.length})
+          </TabsTrigger>
+          <TabsTrigger value="past">
+            Passés ({pastAppointments.length})
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="upcoming">
+          <AppointmentTable
+            data={upcomingAppointments}
+            isLoading={isLoading}
+            onDelete={handleDelete}
+            onUpdate={handleUpdate}
+          />
+        </TabsContent>
+        <TabsContent value="past">
+          <AppointmentTable
+            data={pastAppointments}
+            isLoading={isLoading}
+            onDelete={handleDelete}
+            onUpdate={handleUpdate}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

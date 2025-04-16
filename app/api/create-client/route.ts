@@ -1,130 +1,152 @@
 // app/api/create-client/route.ts
 
-import { NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
-import { createServerSupabaseClient } from "@/lib/supabase/server"
+import { NextResponse } from "next/server"
+import { z } from "zod"
+import { createClient } from "@supabase/supabase-js"
 import { headers } from "next/headers"
 
-export async function POST(req: Request) {
+type UserStatus = "invited" | "active"
+
+const createClientSchema = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+})
+
+export async function POST(request: Request) {
   try {
     const { userId } = await auth()
     if (!userId) {
-      return NextResponse.json({ error: "Non authentifié" }, { status: 401 })
+      return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    const { name, email } = await req.json()
+    const body = await request.json()
+    const validatedData = createClientSchema.parse(body)
 
-    if (!name || !email) {
-      return NextResponse.json(
-        { error: "Le nom et l'email sont requis" },
-        { status: 400 }
-      )
+    // Détecter l'environnement et construire l'URL de redirection
+    const headersList = await headers()
+    const host = headersList.get("host") || ""
+    const protocol = process.env.NODE_ENV === "development" ? "http" : "https"
+    const redirectUrl = `${protocol}://${host}/sign-up`
+
+    console.log("Redirect URL:", redirectUrl) // Pour debug
+
+    // Créer l'invitation via Clerk
+    const response = await fetch("https://api.clerk.com/v1/invitations", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email_address: validatedData.email,
+        redirect_url: redirectUrl,
+        public_metadata: {
+          role: "manager",
+        },
+      }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.text()
+      console.error("Clerk invitation error:", errorData)
+      return new NextResponse(errorData, { 
+        status: response.status,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
     }
 
-    const supabase = await createServerSupabaseClient()
+    const clerkData = await response.json()
+    const invitationId = clerkData.id
 
-    // 1. Créer le client dans Supabase
+    // Initialiser Supabase avec la clé de service
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    )
+
+    // Vérifier si l'utilisateur existe déjà
+    const { data: existingUser } = await supabase
+      .from("users")
+      .select()
+      .eq("email", validatedData.email)
+      .single()
+
+    if (existingUser) {
+      return new NextResponse("User already exists", { status: 400 })
+    }
+
+    // Créer le client d'abord
     const { data: client, error: clientError } = await supabase
       .from("clients")
-      .insert([
-        {
-          name,
-          created_by: userId,
-        },
-      ])
+      .insert({
+        name: validatedData.name,
+        created_by: userId,
+        created_at: new Date().toISOString()
+      })
       .select()
       .single()
 
     if (clientError) {
-      console.error("Erreur lors de la création du client:", clientError)
-      return NextResponse.json(
-        { error: "Erreur lors de la création du client" },
-        { status: 500 }
-      )
+      console.error("Error creating client:", clientError)
+      return new NextResponse("Error creating client", { status: 500 })
     }
 
-    // 2. Créer l'utilisateur dans la table users avec le rôle manager
-    const { error: userError } = await supabase.from("users").insert([
-      {
-        id: email, // temporairement l'email, sera remplacé par l'ID Clerk à l'activation
-        email,
+    // Créer l'utilisateur dans Supabase avec l'ID de l'invitation
+    const { error: userError } = await supabase
+      .from("users")
+      .insert({
+        id: invitationId,
+        email: validatedData.email,
         role: "manager",
+        status: "invited" as UserStatus,
         invited: true,
-        status: "invited",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-    ])
+        created_at: new Date().toISOString()
+      })
 
     if (userError) {
       // Si l'insertion de l'utilisateur échoue, supprimer le client
       await supabase.from("clients").delete().eq("id", client.id)
-      console.error("Erreur lors de la création de l'utilisateur:", userError)
-      return NextResponse.json(
-        { error: "Erreur lors de la création de l'utilisateur" },
-        { status: 500 }
-      )
+      console.error("Error creating user in Supabase:", userError)
+      return new NextResponse("Error creating user", { status: 500 })
     }
 
-    // 3. Créer la relation dans client_members avec l'email
-    const { error: memberError } = await supabase.from("client_members").insert([
-      {
+    // Associer l'utilisateur au client
+    const { error: memberError } = await supabase
+      .from("client_members")
+      .insert({
         client_id: client.id,
-        user_email: email,
+        user_email: validatedData.email,
         invited: true,
-        created_at: new Date().toISOString(),
-      },
-    ])
-
-    if (memberError) {
-      // Si l'insertion de la relation échoue, supprimer l'utilisateur et le client
-      await supabase.from("users").delete().eq("id", email)
-      await supabase.from("clients").delete().eq("id", client.id)
-      console.error("Erreur lors de la création de la relation:", memberError)
-      return NextResponse.json(
-        { error: "Erreur lors de la création de la relation" },
-        { status: 500 }
-      )
-    }
-
-    // 4. Envoyer l'invitation via l'API Clerk
-    try {
-      // Détecter l'environnement et construire l'URL de redirection
-      const headersList = await headers()
-      const host = headersList.get("host") || ""
-      const protocol = process.env.NODE_ENV === "development" ? "http" : "https"
-      const redirectUrl = `${protocol}://${host}/sign-up`
-
-      console.log("Redirect URL:", redirectUrl)
-
-      const response = await fetch("https://api.clerk.com/v1/invitations", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}`,
-        },
-        body: JSON.stringify({
-          email_address: email,
-          redirect_url: redirectUrl,
-        }),
+        created_at: new Date().toISOString()
       })
 
-      if (!response.ok) {
-        throw new Error("Erreur lors de l'envoi de l'invitation")
-      }
-
-      const invitation = await response.json()
-      return NextResponse.json({ success: true, client, invitation })
-    } catch (error) {
-      console.warn("⚠️ Erreur lors de l'envoi de l'invitation:", error)
-      // On retourne quand même un succès car l'utilisateur et le client sont créés
-      return NextResponse.json({ success: true, client })
+    if (memberError) {
+      // Si l'association échoue, nettoyer les données créées
+      await supabase.from("users").delete().eq("id", invitationId)
+      await supabase.from("clients").delete().eq("id", client.id)
+      console.error("Error associating user with client:", memberError)
+      return new NextResponse("Error associating user with client", { status: 500 })
     }
+
+    return NextResponse.json({
+      success: true,
+      client,
+      invitation: clerkData
+    })
   } catch (error) {
-    console.error("Erreur inattendue:", error)
-    return NextResponse.json(
-      { error: "Erreur serveur interne" },
-      { status: 500 }
-    )
+    console.error("Error:", error)
+    if (error instanceof z.ZodError) {
+      return new NextResponse("Invalid input", { status: 400 })
+    }
+    return new NextResponse("Internal Server Error", { status: 500 })
   }
 }

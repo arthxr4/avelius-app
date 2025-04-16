@@ -28,7 +28,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { DateTimePicker24h } from "@/components/ui/date-time-picker"
+import { DateTimePicker } from "@/components/ui/date-time-picker"
 import {
   Select,
   SelectContent,
@@ -316,9 +316,9 @@ export function AddAppointmentDialog({ clientId, onAppointmentCreated }: AddAppo
 
             <div className="space-y-2">
               <h4 className="font-medium leading-none">Date et heure</h4>
-              <DateTimePicker24h
-                date={date}
-                setDate={setDate}
+              <DateTimePicker 
+                date={date} 
+                onSelect={(newDate) => newDate && setDate(newDate)}
               />
             </div>
           </div>
