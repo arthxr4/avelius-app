@@ -48,6 +48,7 @@ import {
   Eye,
   Trash,
   ArrowUpDown,
+  Calendar,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { format } from "date-fns"
@@ -199,24 +200,6 @@ export function AppointmentTable({
       enableHiding: false,
     },
     {
-      accessorKey: "contacts",
-      header: "Contact",
-      cell: ({ row }: { row: Row<Appointment> }) => (
-        <div>
-          {row.original.contacts.first_name} {row.original.contacts.last_name}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "contacts.email",
-      header: "Email",
-      cell: ({ row }: { row: Row<Appointment> }) => (
-        <div className="max-w-[200px] truncate">
-          {row.original.contacts.email}
-        </div>
-      ),
-    },
-    {
       accessorKey: "date",
       header: ({ column }) => {
         return (
@@ -242,6 +225,24 @@ export function AppointmentTable({
           </div>
         )
       },
+    },
+    {
+      accessorKey: "contacts",
+      header: "Contact",
+      cell: ({ row }: { row: Row<Appointment> }) => (
+        <div>
+          {row.original.contacts.first_name} {row.original.contacts.last_name}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "contacts.email",
+      header: "Email",
+      cell: ({ row }: { row: Row<Appointment> }) => (
+        <div className="max-w-[200px] truncate">
+          {row.original.contacts.email}
+        </div>
+      ),
     },
     {
       accessorKey: "status",
@@ -332,153 +333,163 @@ export function AppointmentTable({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
+      {(isLoading || table.getRowModel().rows?.length > 0) && (
+        <>
+          <div className="rounded-md border overflow-hidden">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      return (
+                        <TableHead key={header.id}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </TableHead>
+                      )
+                    })}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
+                    >
+                      Chargement...
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() && "selected"}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={(e) => {
+                        const target = e.target as HTMLElement
+                        if (
+                          target.closest('[role="checkbox"]') ||
+                          target.closest('[role="menuitem"]') ||
+                          target.closest('button')
+                        ) {
+                          return
+                        }
+                        setSelectedAppointment(row.original)
+                        setDetailsOpen(true)
+                      }}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
                           )}
-                    </TableHead>
-                  )
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  Chargement...
-                </TableCell>
-              </TableRow>
-            ) : table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={(e) => {
-                    const target = e.target as HTMLElement
-                    if (
-                      target.closest('[role="checkbox"]') ||
-                      target.closest('[role="menuitem"]') ||
-                      target.closest('button')
-                    ) {
-                      return
-                    }
-                    setSelectedAppointment(row.original)
-                    setDetailsOpen(true)
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="flex items-center justify-between space-x-2 py-4">
+            <div className="flex-1 text-sm text-muted-foreground">
+              {isLoading ? (
+                <Skeleton className="h-4 w-[100px]" />
+              ) : table.getFilteredSelectedRowModel().rows.length > 0 ? (
+                `${table.getFilteredSelectedRowModel().rows.length} rendez-vous sélectionné${table.getFilteredSelectedRowModel().rows.length > 1 ? 's' : ''}`
+              ) : (
+                `${table.getFilteredRowModel().rows.length} rendez-vous`
+              )}
+            </div>
+            <div className="flex items-center space-x-6 lg:space-x-8">
+              <div className="flex items-center space-x-2">
+                <p className="text-sm font-medium">Lignes par page</p>
+                <Select
+                  value={`${table.getState().pagination.pageSize}`}
+                  onValueChange={(value) => {
+                    table.setPageSize(Number(value))
                   }}
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
+                  <SelectTrigger className="h-8 w-[70px]">
+                    <SelectValue placeholder={table.getState().pagination.pageSize} />
+                  </SelectTrigger>
+                  <SelectContent side="top">
+                    {[10, 20, 30, 40, 50].map((pageSize) => (
+                      <SelectItem key={pageSize} value={`${pageSize}`}>
+                        {pageSize}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+                Page {table.getState().pagination.pageIndex + 1} sur{" "}
+                {table.getPageCount()}
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  className="hidden h-8 w-8 p-0 lg:flex"
+                  onClick={() => table.setPageIndex(0)}
+                  disabled={!table.getCanPreviousPage()}
                 >
-                  Aucun rendez-vous trouvé
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="flex items-center justify-between space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {isLoading ? (
-            <Skeleton className="h-4 w-[100px]" />
-          ) : table.getFilteredSelectedRowModel().rows.length > 0 ? (
-            `${table.getFilteredSelectedRowModel().rows.length} rendez-vous sélectionné${table.getFilteredSelectedRowModel().rows.length > 1 ? 's' : ''}`
-          ) : (
-            `${table.getFilteredRowModel().rows.length} rendez-vous`
-          )}
-        </div>
-        <div className="flex items-center space-x-6 lg:space-x-8">
-          <div className="flex items-center space-x-2">
-            <p className="text-sm font-medium">Lignes par page</p>
-            <Select
-              value={`${table.getState().pagination.pageSize}`}
-              onValueChange={(value) => {
-                table.setPageSize(Number(value))
-              }}
-            >
-              <SelectTrigger className="h-8 w-[70px]">
-                <SelectValue placeholder={table.getState().pagination.pageSize} />
-              </SelectTrigger>
-              <SelectContent side="top">
-                {[10, 20, 30, 40, 50].map((pageSize) => (
-                  <SelectItem key={pageSize} value={`${pageSize}`}>
-                    {pageSize}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  <span className="sr-only">Première page</span>
+                  <ChevronsLeftIcon className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-8 w-8 p-0"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  <span className="sr-only">Page précédente</span>
+                  <ChevronLeftIcon className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-8 w-8 p-0"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  <span className="sr-only">Page suivante</span>
+                  <ChevronRightIcon className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  className="hidden h-8 w-8 p-0 lg:flex"
+                  onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                  disabled={!table.getCanNextPage()}
+                >
+                  <span className="sr-only">Dernière page</span>
+                  <ChevronsRightIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
-          <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-            Page {table.getState().pagination.pageIndex + 1} sur{" "}
-            {table.getPageCount()}
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              className="hidden h-8 w-8 p-0 lg:flex"
-              onClick={() => table.setPageIndex(0)}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <span className="sr-only">Première page</span>
-              <ChevronsLeftIcon className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="h-8 w-8 p-0"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <span className="sr-only">Page précédente</span>
-              <ChevronLeftIcon className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="h-8 w-8 p-0"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              <span className="sr-only">Page suivante</span>
-              <ChevronRightIcon className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="hidden h-8 w-8 p-0 lg:flex"
-              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-              disabled={!table.getCanNextPage()}
-            >
-              <span className="sr-only">Dernière page</span>
-              <ChevronsRightIcon className="h-4 w-4" />
-            </Button>
+        </>
+      )}
+      {!isLoading && !table.getRowModel().rows?.length && (
+        <div className="flex h-[400px] items-center justify-center border-subtle border border-dashed rounded-md">
+          <div className="flex flex-col items-center justify-center gap-6">
+            <div className="rounded-full bg-muted p-6">
+              <Calendar className="h-10 w-10 text-default" />
+            </div>
+            <div className="flex flex-col items-center justify-center gap-2">
+            <h3 className="font-semibold text-xl">Aucun rendez-vous</h3>
+            <p className="text-mb text-muted-foreground">
+              Vous n'avez pas de rendez-vous dans cette catégorie pour le moment.
+            </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
       <DeleteAppointmentDialog
         isOpen={deleteDialogOpen}
         onClose={() => {
@@ -578,12 +589,15 @@ export default function MeetingsPage() {
   const now = new Date()
   const upcomingAppointments = appointments.filter((appointment) => {
     const appointmentDate = new Date(appointment.date)
-    return appointmentDate >= now
+    return appointmentDate >= now && appointment.status !== "canceled"
   })
   const pastAppointments = appointments.filter((appointment) => {
     const appointmentDate = new Date(appointment.date)
-    return appointmentDate < now
+    return appointmentDate < now && appointment.status !== "canceled"
   })
+  const canceledAppointments = appointments.filter((appointment) => 
+    appointment.status === "canceled"
+  )
 
   return (
     <div className="space-y-4 p-8">
@@ -591,21 +605,23 @@ export default function MeetingsPage() {
         <h2 className="text-2xl font-bold">Vos rendez-vous</h2>
         <AddAppointmentDialog
           clientId={params.id as string}
-          onAppointmentCreated={() => {
-            setIsLoading(true)
-            fetchAppointments()
+          onAppointmentCreated={(newAppointment) => {
+            setAppointments(prev => [...prev, newAppointment])
+            if (cache[params.id as string]) {
+              setCache(prev => ({
+                ...prev,
+                [params.id as string]: [...prev[params.id as string], newAppointment]
+              }))
+            }
           }}
         />
       </div>
 
       <Tabs defaultValue="upcoming" className="w-full">
-        <TabsList className="grid w-[400px] grid-cols-2">
-          <TabsTrigger value="upcoming">
-            À venir ({upcomingAppointments.length})
-          </TabsTrigger>
-          <TabsTrigger value="past">
-            Passés ({pastAppointments.length})
-          </TabsTrigger>
+        <TabsList className="inline-flex rounded-md bg-muted p-1 text-muted-foreground">
+          <TabsTrigger value="upcoming">À venir</TabsTrigger>
+          <TabsTrigger value="past">Passés</TabsTrigger>
+          <TabsTrigger value="canceled">Annulés</TabsTrigger>
         </TabsList>
         <TabsContent value="upcoming">
           <AppointmentTable
@@ -618,6 +634,14 @@ export default function MeetingsPage() {
         <TabsContent value="past">
           <AppointmentTable
             data={pastAppointments}
+            isLoading={isLoading}
+            onDelete={handleDelete}
+            onUpdate={handleUpdate}
+          />
+        </TabsContent>
+        <TabsContent value="canceled">
+          <AppointmentTable
+            data={canceledAppointments}
             isLoading={isLoading}
             onDelete={handleDelete}
             onUpdate={handleUpdate}

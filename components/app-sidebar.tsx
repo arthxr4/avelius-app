@@ -15,8 +15,11 @@ import {
   Calendar,
   Home,
   ListChecks,
+  FileText,
 } from "lucide-react"
 import { useUser } from "@clerk/nextjs"
+import { createBrowserClient } from '@supabase/ssr'
+import { useEffect, useState } from "react"
 
 import { NavMain } from "./nav-main"
 import { NavProjects } from "./nav-projects"
@@ -30,10 +33,16 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { useTeam } from "@/lib/team-context"
+import { useIsAdmin } from "@/lib/hooks/use-is-admin"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { current } = useTeam()
   const { user: clerkUser } = useUser()
+  const { isAdmin } = useIsAdmin()
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
   const clientLinks = [
     {
@@ -51,9 +60,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       url: current?.id ? `/clients/${current.id}/prospecting-lists` : "#",
       icon: ListChecks,
     },
+    {
+      title: "Onboarding",
+      url: current?.id ? `/clients/${current.id}/details` : "#",
+      icon: FileText,
+    },
   ]
   
-
   const navProjects = [
     {
       name: "Clients",
@@ -65,7 +78,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       url: "/admin/members",
       icon: Map,
     },
-  ].filter(Boolean) // 🔥 on enlève les "false" si `current` est null
+  ].filter(Boolean)
 
   const user = {
     name: clerkUser ? `${clerkUser.firstName} ${clerkUser.lastName}` : "",
@@ -80,7 +93,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={clientLinks} />
-        <NavProjects projects={navProjects} />
+        {isAdmin && <NavProjects projects={navProjects} />}
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={user} />

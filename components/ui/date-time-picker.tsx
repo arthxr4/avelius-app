@@ -98,7 +98,7 @@ export function DateTimePicker({ date, onSelect }: DateTimePickerProps) {
                   <Button
                     key={label}
                     variant={date && date.getHours() === hour && date.getMinutes() === minute ? "default" : "ghost"}
-                    className="w-full justify-center mb-1"
+                    className="w-full justify-center font-normal mb-1"
                     onClick={() => handleTimeSelect(hour, minute)}
                   >
                     {label}

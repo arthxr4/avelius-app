@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/card-with-dividers"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
-import { Loader2 } from "lucide-react"
+import { Loader2, FileIcon, ExternalLink, X } from "lucide-react"
 
 interface OnboardingField {
   id: string
@@ -25,6 +25,7 @@ interface OnboardingField {
   required: boolean
   created_at: string
   section: 'company' | 'targeting' | 'pitch' | 'resources' | 'tech' | 'confirm'
+  order_in_section: number
 }
 
 interface OnboardingResponse {
@@ -44,23 +45,23 @@ interface OnboardingFormProps {
 
 const sectionTitles: Record<OnboardingField['section'], { title: string; description: string }> = {
   company: {
-    title: "À propos de l'entreprise",
+    title: "1 - À propos de l'entreprise",
     description: "Informations générales sur l'entreprise et son activité",
   },
   targeting: {
-    title: "Ciblage & prospects",
+    title: "2 - Ciblage & prospects",
     description: "Définition de la cible et des critères de prospection",
   },
   pitch: {
-    title: "Argumentaire de vente",
+    title: "3 - Argumentaire de vente",
     description: "Messages clés et points de différenciation",
   },
   resources: {
-    title: "Docs & fichiers",
+    title: "4 - Docs & fichiers",
     description: "Documents et ressources nécessaires",
   },
   tech: {
-    title: "Setup technique",
+    title: "5 - Setup technique",
     description: "Configuration et paramètres techniques",
   },
   confirm: {
@@ -188,6 +189,7 @@ export function OnboardingForm({ clientId, fields, responses }: OnboardingFormPr
     const value = formData[field.id]
     const response = responses.find((r) => r.field_id === field.id)
     const isSubmitting = submittingSections[field.section]
+    const file = files[field.id]
 
     switch (field.type) {
       case "textarea":
@@ -214,22 +216,44 @@ export function OnboardingForm({ clientId, fields, responses }: OnboardingFormPr
 
       case "file":
         return (
-          <div className="space-y-2">
-            <Input
-              type="file"
-              onChange={(e) => handleFileChange(field.id, e.target.files?.[0] || null)}
-              required={field.required && !response}
-              disabled={isSubmitting}
-            />
-            {response && response.value && (
-              <a
-                href={response.value}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-blue-600 hover:underline"
-              >
-                Voir le fichier actuel
-              </a>
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <Input
+                type="file"
+                onChange={(e) => handleFileChange(field.id, e.target.files?.[0] || null)}
+                required={field.required && !response}
+                disabled={isSubmitting}
+                className="flex-1"
+              />
+              {file && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleFileChange(field.id, null)}
+                  disabled={isSubmitting}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            
+            {(response?.value || file) && (
+              <div className="flex items-center gap-2 text-sm">
+                <FileIcon className="h-4 w-4 text-blue-600" />
+                <span className="font-medium">
+                  {file ? file.name : response?.value.split('/').pop()}
+                </span>
+                {response?.value && !file && (
+                  <a
+                    href={response.value}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-2 inline-flex items-center gap-1 text-blue-600 hover:text-blue-800"
+                  >
+                    Voir <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+              </div>
             )}
           </div>
         )
@@ -249,14 +273,26 @@ export function OnboardingForm({ clientId, fields, responses }: OnboardingFormPr
     }
   }
 
-  // Group fields by section
+  // Group and sort fields by section
   const fieldsBySection = fields.reduce((acc, field) => {
     if (!acc[field.section]) {
       acc[field.section] = []
     }
     acc[field.section].push(field)
+    // Sort fields within each section by order_in_section
+    acc[field.section].sort((a, b) => (a.order_in_section || 0) - (b.order_in_section || 0))
     return acc
   }, {} as Record<OnboardingField['section'], OnboardingField[]>)
+
+  // Define the order of sections
+  const sectionOrder: OnboardingField['section'][] = [
+    'company',
+    'targeting',
+    'pitch',
+    'resources',
+    'tech',
+    'confirm'
+  ]
 
   // Check if a section has any dirty fields
   const isSectionDirty = (section: OnboardingField['section']) => {
@@ -265,49 +301,51 @@ export function OnboardingForm({ clientId, fields, responses }: OnboardingFormPr
 
   return (
     <div className="space-y-6">
-      {(Object.keys(fieldsBySection) as OnboardingField['section'][]).map((section) => (
-        <CardWithDividers key={section}>
-          <CardWithDividersHeader>
-            <CardWithDividersTitle>
-              {sectionTitles[section].title}
-            </CardWithDividersTitle>
-            <CardWithDividersDescription>
-              {sectionTitles[section].description}
-            </CardWithDividersDescription>
-          </CardWithDividersHeader>
-          <Separator />
-          <CardWithDividersContent>
-            <div className="space-y-6">
-              {fieldsBySection[section].map((field) => (
-                <div key={field.id} className="space-y-2">
-                  <Label htmlFor={field.id} className="flex items-center gap-2">
-                    {field.label}
-                    {field.required && <span className="text-red-500">*</span>}
-                  </Label>
-                  {renderField(field)}
-                </div>
-              ))}
-            </div>
-          </CardWithDividersContent>
-          <Separator />
-          <CardWithDividersFooter>
-            <Button
-              onClick={() => handleSubmit(section, fieldsBySection[section])}
-              disabled={submittingSections[section] || !isSectionDirty(section)}
-            >
-              {submittingSections[section] ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Enregistrement...
-                </>
-              ) : (
-                <>
-                Mettre à jour
-                </>
-              )}
-            </Button>
-          </CardWithDividersFooter>
-        </CardWithDividers>
+      {sectionOrder.map((section) => (
+        fieldsBySection[section] && (
+          <CardWithDividers key={section}>
+            <CardWithDividersHeader>
+              <CardWithDividersTitle>
+                {sectionTitles[section].title}
+              </CardWithDividersTitle>
+              <CardWithDividersDescription>
+                {sectionTitles[section].description}
+              </CardWithDividersDescription>
+            </CardWithDividersHeader>
+            <Separator />
+            <CardWithDividersContent>
+              <div className="space-y-6">
+                {fieldsBySection[section].map((field) => (
+                  <div key={field.id} className="space-y-2">
+                    <Label htmlFor={field.id} className="flex items-center gap-2">
+                      {field.label}
+                      {field.required && <span className="text-red-500">*</span>}
+                    </Label>
+                    {renderField(field)}
+                  </div>
+                ))}
+              </div>
+            </CardWithDividersContent>
+            <Separator />
+            <CardWithDividersFooter>
+              <Button
+                onClick={() => handleSubmit(section, fieldsBySection[section])}
+                disabled={submittingSections[section] || !isSectionDirty(section)}
+              >
+                {submittingSections[section] ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Enregistrement...
+                  </>
+                ) : (
+                  <>
+                  Mettre à jour
+                  </>
+                )}
+              </Button>
+            </CardWithDividersFooter>
+          </CardWithDividers>
+        )
       ))}
     </div>
   )

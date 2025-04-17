@@ -1,6 +1,6 @@
 import { format } from "date-fns"
 import { fr } from "date-fns/locale"
-import { CalendarIcon } from "lucide-react"
+import { CalendarIcon, MapPin, User, Briefcase, Mail, Phone, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Sheet,
@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { useState, useEffect } from "react"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
+import { Separator } from "@/components/ui/separator"
 
 const STATUS_OPTIONS = [
   { value: "confirmed", label: "Confirmé" },
@@ -53,6 +54,11 @@ interface AppointmentDetailsSheetProps {
   onUpdate: (appointment: Appointment) => void
 }
 
+const capitalize = (str: string) => {
+  if (!str) return ""
+  return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
 export function AppointmentDetailsSheet({
   appointment,
   open,
@@ -72,22 +78,20 @@ export function AppointmentDetailsSheet({
 
   if (!appointment) return null
 
+  const hasChanges = 
+    selectedDate?.toISOString() !== new Date(appointment.date).toISOString() ||
+    status !== appointment.status
+
   const handleUpdate = async () => {
     if (!selectedDate) {
       toast.error("Veuillez sélectionner une date")
       return
     }
 
+    if (!hasChanges) return
+
     setIsUpdating(true)
     try {
-      console.log("Envoi de la requête avec les données:", {
-        id: appointment.id,
-        client_id: appointment.client_id,
-        contact_id: appointment.contact_id,
-        date: selectedDate.toISOString(),
-        status,
-      })
-      
       const response = await fetch("/api/update-appointment/", {
         method: "PATCH",
         headers: {
@@ -102,10 +106,6 @@ export function AppointmentDetailsSheet({
         }),
       })
 
-      console.log("Status de la réponse:", response.status)
-      const responseData = await response.json()
-      console.log("Données de la réponse:", responseData)
-
       if (response.ok) {
         onUpdate({
           ...appointment,
@@ -115,7 +115,7 @@ export function AppointmentDetailsSheet({
         toast.success("Rendez-vous mis à jour avec succès")
         onOpenChange(false)
       } else {
-        console.error("Erreur lors de la mise à jour:", responseData)
+        const responseData = await response.json()
         toast.error(responseData.error || "Erreur lors de la mise à jour du rendez-vous")
       }
     } catch (error) {
@@ -129,55 +129,57 @@ export function AppointmentDetailsSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-[400px] sm:w-[540px]">
-        <SheetHeader>
+        <SheetHeader className="space-y-1">
           <SheetTitle>Détails du rendez-vous</SheetTitle>
-          <SheetDescription className="text-base">
-            Avec {appointment.contacts.first_name} {appointment.contacts.last_name}
-          </SheetDescription>
         </SheetHeader>
-        <div className="grid gap-6 py-6">
-          <div className="space-y-6">
-            <h3 className="text-sm font-medium">Contact</h3>
-            <div className="grid gap-6">
-              <div>
-                <div className="text-sm text-muted-foreground mb-1.5">Nom complet</div>
-                <div className="text-base">
-                  {appointment.contacts.first_name} {appointment.contacts.last_name}
+
+        <div className="mt-6 space-y-6">
+          {/* Who section */}
+          <div className="space-y-2">
+            <Label className="text-muted-foreground">Prospect</Label>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
+                  <span className="text-sm font-medium">
+                    {appointment.contacts.first_name[0]}
+                    {appointment.contacts.last_name[0]}
+                  </span>
+                </div>
+                <div>
+                  <div className="font-medium">
+                    {appointment.contacts.first_name} {appointment.contacts.last_name}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                  {capitalize(appointment.contacts.company)}
+                  </div>
                 </div>
               </div>
-              <div>
-                <div className="text-sm text-muted-foreground mb-1.5">Email</div>
-                <div className="text-base">
-                  {appointment.contacts.email}
-                </div>
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground mb-1.5">Téléphone</div>
-                <div className="text-base">
-                  {appointment.contacts.phone}
-                </div>
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground mb-1.5">Entreprise</div>
-                <div className="text-base">
-                  {appointment.contacts.company}
-                </div>
-              </div>
+              
             </div>
           </div>
+
+          {/* Job section */}
           <div className="space-y-2">
-            <Label>Date et heure</Label>
+            <Label className="text-muted-foreground">Entreprise</Label>
+            <div className="flex items-center justify-between">
+              <div className="font-medium">{capitalize(appointment.contacts.company)}</div>
+             
+            </div>
+          </div>
+
+          {/* When section */}
+          <div className="space-y-2">
+            <Label className="text-muted-foreground">Date et heure</Label>
             <DateTimePicker 
               date={selectedDate} 
               onSelect={(newDate) => newDate && setSelectedDate(newDate)}
             />
           </div>
-          <div className="grid gap-2">
-            <Label>Statut</Label>
-            <Select
-              value={status}
-              onValueChange={setStatus}
-            >
+
+          {/* Status section */}
+          <div className="space-y-2">
+            <Label className="text-muted-foreground">Status</Label>
+            <Select value={status} onValueChange={setStatus}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -190,20 +192,33 @@ export function AppointmentDetailsSheet({
               </SelectContent>
             </Select>
           </div>
+
+          
         </div>
-        <div className="flex justify-end gap-2 mt-4">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-          >
-            Annuler
-          </Button>
-          <Button
-            onClick={handleUpdate}
-            disabled={isUpdating}
-          >
-            {isUpdating ? "Enregistrement..." : "Enregistrer les modifications"}
-          </Button>
+
+        <div className="absolute bottom-0 left-0 right-0 p-6 bg-muted/50 border-t">
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              disabled={isUpdating}
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={handleUpdate}
+              disabled={isUpdating || !hasChanges}
+            >
+              {isUpdating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Enregistrement...
+                </>
+              ) : (
+                "Enregistrer"
+              )}
+            </Button>
+          </div>
         </div>
       </SheetContent>
     </Sheet>

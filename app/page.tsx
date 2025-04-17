@@ -1,45 +1,78 @@
 "use client"
 
-import { useAuth } from "@clerk/nextjs"
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
+import { useTeam } from "@/lib/team-context"
+import { useIsAdmin } from "@/lib/hooks/use-is-admin"
+import { useUser } from "@clerk/nextjs"
 
 export default function HomePage() {
-  const { userId, isLoaded } = useAuth()
   const router = useRouter()
-  const [redirecting, setRedirecting] = useState(false)
+  const { current, teams, isLoading: isLoadingTeam, error } = useTeam()
+  const { isAdmin, isLoading: isLoadingAdmin } = useIsAdmin()
+  const { isLoaded: isClerkLoaded, isSignedIn } = useUser()
 
   useEffect(() => {
-    if (isLoaded && userId) {
-      setRedirecting(true)
-      router.push("/dashboard")
-    }
-  }, [isLoaded, userId, router])
+    const handleRedirect = async () => {
+      // Attendre que tout soit chargé
+      if (!isClerkLoaded || isLoadingTeam || isLoadingAdmin) {
+        return
+      }
 
-  if (!isLoaded || redirecting) {
+      // Si non connecté, rediriger vers la connexion
+      if (!isSignedIn) {
+        router.push("/sign-in")
+        return
+      }
+
+      try {
+        // Si admin, rediriger vers la page admin ou le client sélectionné
+        if (isAdmin) {
+          if (current) {
+            router.push(`/clients/${current.id}`)
+          } else {
+            router.push("/admin/clients-manager")
+          }
+          return
+        }
+
+        // Si erreur lors du chargement des clients
+        if (error) {
+          console.error("Erreur lors du chargement des clients:", error)
+          router.push("/unauthorized")
+          return
+        }
+
+        // Pour les managers, attendre d'avoir les données des clients
+        if (!teams || teams.length === 0) {
+          return // On attend que les données soient chargées
+        }
+
+        // Si on a un client sélectionné, l'utiliser
+        if (current) {
+          router.push(`/clients/${current.id}`)
+          return
+        }
+
+        // Si on a des clients mais aucun sélectionné, utiliser le premier
+        router.push(`/clients/${teams[0].id}`)
+      } catch (error) {
+        console.error("Erreur lors de la redirection:", error)
+        router.push("/unauthorized")
+      }
+    }
+
+    handleRedirect()
+  }, [isClerkLoaded, isSignedIn, current, teams, isLoadingTeam, isLoadingAdmin, isAdmin, router, error])
+
+  // Afficher un état de chargement pendant la redirection
+  if (!isClerkLoaded || isLoadingTeam || isLoadingAdmin) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-muted-foreground">
-        Chargement...
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-muted-foreground">Chargement...</div>
       </div>
     )
   }
 
-  return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-4 text-center">
-      <h1 className="text-4xl font-bold">Bienvenue sur l'app</h1>
-      <p className="max-w-md text-muted-foreground">
-        Application cold call avec tableau de bord, sidebar dynamique et authentification Clerk.
-      </p>
-      <div className="flex gap-4">
-        <Button asChild>
-          <Link href="/sign-in">Connexion</Link>
-        </Button>
-        <Button asChild variant="outline">
-          <Link href="/sign-up">Créer un compte</Link>
-        </Button>
-      </div>
-    </div>
-  )
+  return null
 }

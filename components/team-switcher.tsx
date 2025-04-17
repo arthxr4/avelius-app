@@ -1,8 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { ChevronsUpDown, Plus } from "lucide-react"
+import { ChevronsUpDown, Plus, Check } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
+import { useUser } from "@clerk/nextjs"
+import { createBrowserClient } from '@supabase/ssr'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,12 +22,63 @@ import {
 } from "@/components/ui/sidebar"
 import { useTeam } from "@/lib/team-context"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useEffect, useState } from "react"
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/components/ui/command"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 export function TeamSwitcher() {
   const { isMobile } = useSidebar()
   const { current, setCurrent, teams, isLoading } = useTeam()
   const router = useRouter()
   const pathname = usePathname()
+  const { user: clerkUser } = useUser()
+  const [isAdmin, setIsAdmin] = React.useState(false)
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
+  React.useEffect(() => {
+    const fetchUserRole = async () => {
+      if (!clerkUser?.emailAddresses[0]?.emailAddress) return
+      
+      const { data, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('email', clerkUser.emailAddresses[0].emailAddress)
+        .single()
+
+      if (data && !error) {
+        setIsAdmin(data.role === 'admin')
+      }
+    }
+
+    fetchUserRole()
+  }, [clerkUser?.emailAddresses])
 
   React.useEffect(() => {
     // 🧠 extrait le client_id depuis l'URL si présent
@@ -126,12 +179,14 @@ export function TeamSwitcher() {
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="gap-2 p-2" disabled>
-              <div className="flex size-6 items-center justify-center rounded-md border bg-background">
-                <Plus className="size-4" />
-              </div>
-              <div className="font-medium text-muted-foreground">Ajouter un client</div>
-            </DropdownMenuItem>
+            {isAdmin && (
+              <DropdownMenuItem className="gap-2 p-2" disabled>
+                <div className="flex size-6 items-center justify-center rounded-md border bg-background">
+                  <Plus className="size-4" />
+                </div>
+                <div className="font-medium text-muted-foreground">Ajouter un client</div>
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

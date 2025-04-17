@@ -2,6 +2,7 @@
 "use client"
 
 import { createContext, useContext, useEffect, useState } from "react"
+import { useUser } from "@clerk/nextjs"
 
 export type Team = {
   id: string
@@ -28,6 +29,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
   const [teams, setTeams] = useState<Team[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { user } = useUser()
 
   // Load saved team from localStorage after mount
   useEffect(() => {
@@ -96,8 +98,16 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    loadTeams()
-  }, []) // Load clients once on mount
+    if (user) {
+      loadTeams()
+    } else {
+      // Reset state when user is not authenticated
+      setTeams([])
+      setCurrent(null)
+      setError(null)
+      setIsLoading(false)
+    }
+  }, [user]) // Reload teams when user changes
 
   return (
     <TeamContext.Provider value={{ current, setCurrent, teams, isLoading, error }}>

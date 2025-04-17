@@ -192,94 +192,66 @@ export function CreateProspectingListDialog({
       <DialogTrigger asChild>
         <Button>Nouvelle liste</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-xl overflow-visible">
-        <DialogHeader>
-          <DialogTitle>Nouvelle liste de prospection</DialogTitle>
-        </DialogHeader>
-        <div className="max-h-[80vh] overflow-y-auto pr-6 -mr-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="details">Détails</TabsTrigger>
-                <TabsTrigger value="import">Import CSV</TabsTrigger>
-              </TabsList>
+      <DialogContent className="max-w-xl p-0">
+        <div className="flex flex-col p-6 pb-11 gap-6">
+          <DialogHeader>
+            <DialogTitle>Nouvelle liste de prospection</DialogTitle>
+          </DialogHeader>
 
-              <TabsContent value="details" className="space-y-4 m-1">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Nom de la liste</Label>
-                  <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, title: e.target.value }))
-                    }
-                    required
-                  />
-                </div>
+          <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="details">Détails</TabsTrigger>
+              <TabsTrigger value="import">Import CSV</TabsTrigger>
+            </TabsList>
 
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, description: e.target.value }))
-                    }
-                  />
-                </div>
-              </TabsContent>
+            <TabsContent value="details" className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Nom de la liste</Label>
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, title: e.target.value }))
+                  }
+                  required
+                />
+              </div>
 
-              <TabsContent value="import" className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Fichier CSV</Label>
-                  <Input
-                    type="file"
-                    accept=".csv"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0]
-                      if (file) {
-                        setCsvFile(file)
-                        Papa.parse(file, {
-                          header: true,
-                          skipEmptyLines: true,
-                          complete: (results: ParseResult<Record<string, string>>) => {
-                            setCsvData(results.data)
-                            const headers = Object.keys(results.data[0] || {})
-                            const initialMapping: Record<string, string> = {}
-                            
-                            headers.forEach((header) => {
-                              const normalizedHeader = header.toLowerCase().trim()
-                              // Si le header correspond exactement à une value de contactFields
-                              const matchingField = contactFields.find(
-                                field => field.value === normalizedHeader
-                              )
-                              if (matchingField) {
-                                initialMapping[header] = matchingField.value
-                              } else {
-                                initialMapping[header] = ""
-                              }
-                            })
-                            
-                            setColumnMapping(initialMapping)
-                          },
-                        })
-                      }
-                    }}
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Format accepté : CSV
-                  </p>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, description: e.target.value }))
+                  }
+                />
+              </div>
+            </TabsContent>
 
-                {csvData.length > 0 && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-medium">Association des colonnes</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {csvData.length} contacts à importer
-                      </p>
-                    </div>
-                    
+            <TabsContent value="import" className="space-y-4">
+              <div className="space-y-2">
+                <Label>Fichier CSV</Label>
+                <Input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileChange}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Format accepté : CSV
+                </p>
+              </div>
+
+              {csvData.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium">Association des colonnes</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {csvData.length} contacts à importer
+                    </p>
+                  </div>
+                  
+                  <div className="max-h-[300px] overflow-y-auto pr-4 -mr-4">
                     <div className="grid gap-4">
                       {Object.keys(columnMapping).map((csvCol) => {
                         const usedFields = Object.values(columnMapping)
@@ -313,28 +285,46 @@ export function CreateProspectingListDialog({
                       })}
                     </div>
                   </div>
-                )}
-              </TabsContent>
-            </Tabs>
-
-            <DialogFooter>
-              <Button
-                type="submit"
-                disabled={loading || !formData.title}
-                onClick={handleSubmit}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Création...
-                  </>
-                ) : (
-                  "Créer la liste"
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
+
+        <DialogFooter className="bg-muted border-t px-6 py-4 rounded-b-lg">
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setOpen(false)
+                setFormData({
+                  title: "",
+                  description: "",
+                })
+                setCsvFile(null)
+                setCsvData([])
+                setColumnMapping({})
+                setCurrentTab("details")
+              }}
+            >
+              Annuler
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading || !formData.title || !csvFile}
+              onClick={handleSubmit}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Création...
+                </>
+              ) : (
+                "Créer la liste"
+              )}
+            </Button>
+          </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

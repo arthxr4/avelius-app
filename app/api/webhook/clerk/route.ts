@@ -92,20 +92,54 @@ export async function POST(req: Request) {
       )
 
       console.log("🔍 Checking existing user in Supabase...")
-      // Vérifier d'abord si l'utilisateur existe
+      // Vérifier d'abord si l'utilisateur existe dans la table users
       const { data: existingUser, error: selectError } = await supabase
         .from("users")
         .select()
         .eq("email", email)
         .single()
 
-      if (selectError) {
-        console.error("❌ Error checking existing user:", selectError)
-        return new NextResponse("Error checking user", { status: 500 })
-      }
-
+      // Si l'utilisateur n'existe pas dans users, vérifier dans managers
       if (!existingUser) {
-        console.error("❌ No user found in Supabase for email:", email)
+        console.log("🔍 Checking existing manager in Supabase...")
+        const { data: existingManager, error: managerError } = await supabase
+          .from("managers")
+          .select()
+          .eq("email", email)
+          .single()
+
+        if (managerError && managerError.code !== 'PGRST116') {
+          console.error("❌ Error checking existing manager:", managerError)
+          return new NextResponse("Error checking manager", { status: 500 })
+        }
+
+        if (existingManager) {
+          console.log("✅ Found existing manager:", existingManager)
+          
+          // Mettre à jour le manager avec l'ID Clerk
+          const { error: updateError } = await supabase
+            .from("managers")
+            .update({ 
+              id: id,
+              status: "active" as UserStatus,
+              invited: false,
+              accepted_at: new Date().toISOString()
+            })
+            .eq("email", email)
+
+          if (updateError) {
+            console.error("❌ Error updating manager in Supabase:", updateError)
+            return new NextResponse("Error updating manager", { status: 500 })
+          }
+
+          console.log("✅ Successfully updated manager in Supabase")
+          return new NextResponse(JSON.stringify({ success: true }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          })
+        }
+
+        console.error("❌ No user or manager found in Supabase for email:", email)
         return new NextResponse("User not found", { status: 404 })
       }
 
@@ -138,11 +172,12 @@ export async function POST(req: Request) {
       const { error: memberError } = await supabase
         .from("client_members")
         .update({
-          user_id: id,
+          user_email: id, // On garde l'email comme identifiant pour le moment
           invited: false,
+          accepted_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
-        .eq("user_id", email)
+        .eq("user_email", email)
 
       if (memberError) {
         console.error("Erreur lors de la mise à jour des relations:", memberError)

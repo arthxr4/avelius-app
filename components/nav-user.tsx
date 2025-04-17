@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronsUpDown, CreditCard, LogOut, Settings } from "lucide-react"
+import { ChevronsUpDown, CreditCard, LogOut, Settings, User } from "lucide-react"
 import { useUser, useClerk } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -153,12 +153,12 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem onClick={() => router.push("/settings")}>
-                <Settings className="mr-2 h-4 w-4" />
-                Paramètres
+                <User className="mr-2 h-4 w-4" />
+                Mon profil
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/billing")}>
+              <DropdownMenuItem onClick={() => router.push("/settings")}>
                 <CreditCard className="mr-2 h-4 w-4" />
-                Facturation
+                Mes paramètres
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
