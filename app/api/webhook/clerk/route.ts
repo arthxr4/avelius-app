@@ -168,23 +168,8 @@ export async function POST(req: Request) {
         status: "active"
       })
 
-      // 2. Mettre à jour les relations dans client_members
-      const { error: memberError } = await supabase
-        .from("client_members")
-        .update({
-          user_email: id, // On garde l'email comme identifiant pour le moment
-          invited: false,
-          accepted_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("user_email", email)
-
-      if (memberError) {
-        console.error("Erreur lors de la mise à jour des relations:", memberError)
-        return new NextResponse("Erreur lors de la mise à jour des relations", {
-          status: 500,
-        })
-      }
+      // Suppression de la mise à jour des relations dans client_members car non nécessaire
+      // Les relations sont déjà créées au moment de l'invitation
 
       return new NextResponse(JSON.stringify({ success: true }), {
         status: 200,

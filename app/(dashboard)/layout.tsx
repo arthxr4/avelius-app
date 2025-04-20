@@ -4,12 +4,42 @@
 import { useEffect, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { AppSidebar } from "@/components/app-sidebar"
-import { SidebarProvider } from "@/components/ui/sidebar"
+import { SidebarProvider, useSidebar } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { BreadcrumbNav } from "@/components/breadcrumb-nav"
 import { UserMenu } from "@/components/user-menu"
 import type { ReactNode } from "react"
+
+// Composant qui gère la réactivité de la sidebar
+function ResponsiveSidebar() {
+  const { setOpen } = useSidebar()
+
+  useEffect(() => {
+    // Fonction pour gérer le redimensionnement
+    const handleResize = () => {
+      const isLargeScreen = window.matchMedia('(min-width: 1024px)').matches // lg breakpoint
+      const isMediumScreen = window.matchMedia('(min-width: 768px)').matches // md breakpoint
+      
+      if (isLargeScreen) {
+        setOpen(true) // expanded sur lg
+      } else if (isMediumScreen) {
+        setOpen(false) // collapsed sur md
+      }
+    }
+
+    // Appliquer la configuration initiale
+    handleResize()
+
+    // Ajouter l'écouteur d'événement
+    window.addEventListener('resize', handleResize)
+
+    // Nettoyer l'écouteur
+    return () => window.removeEventListener('resize', handleResize)
+  }, [setOpen])
+
+  return null
+}
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const router = useRouter()
@@ -47,18 +77,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider>
+      <ResponsiveSidebar />
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-16 items-center gap-2 px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-2 h-4" />
-          <BreadcrumbNav />
-          <div className="ml-auto">
-            <UserMenu />
-          </div>
-        </header>
-
-        <div className="flex flex-col gap-4 p-4 pt-0">
+        <div className="flex flex-col gap-4 p-4">
           {children}
         </div>
       </SidebarInset>

@@ -17,6 +17,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import { Loader2, FileIcon, ExternalLink, X } from "lucide-react"
+import { FileField } from "@/components/onboarding/file-field"
 
 interface OnboardingField {
   id: string
@@ -120,7 +121,10 @@ export function OnboardingForm({ clientId, fields, responses }: OnboardingFormPr
 
       sectionFields.forEach((field) => {
         if (dirtyFields[field.id]) {
-          sectionFormData[field.id] = formData[field.id]
+          // Ne pas inclure les champs de type fichier dans formData
+          if (field.type !== 'file') {
+            sectionFormData[field.id] = formData[field.id]
+          }
           if (files[field.id]) {
             sectionFiles[field.id] = files[field.id]
           }
@@ -128,7 +132,7 @@ export function OnboardingForm({ clientId, fields, responses }: OnboardingFormPr
       })
 
       // If no changes in this section, skip the API call
-      if (Object.keys(sectionFormData).length === 0) {
+      if (Object.keys(sectionFormData).length === 0 && Object.keys(sectionFiles).length === 0) {
         toast.info("Aucune modification à enregistrer")
         return
       }
@@ -185,92 +189,126 @@ export function OnboardingForm({ clientId, fields, responses }: OnboardingFormPr
     }
   }
 
-  const renderField = (field: OnboardingField) => {
-    const value = formData[field.id]
-    const response = responses.find((r) => r.field_id === field.id)
-    const isSubmitting = submittingSections[field.section]
-    const file = files[field.id]
+  // Fonction pour générer des placeholders pertinents
+  const getPlaceholder = (field: OnboardingField) => {
+    const label = field.label.toLowerCase()
+    
+    // Placeholders spécifiques pour chaque champ
+    if (label.includes("description de l'entreprise")) 
+      return "Agence de growth marketing B2B spécialisée dans la génération de leads qualifiés pour les éditeurs de logiciels. 5 ans d'expérience, équipe de 12 personnes."
 
+    if (label.includes("proposition de valeur")) 
+      return "Nous générons 50+ leads B2B qualifiés par mois pour les éditeurs de logiciels, avec un taux de transformation de 15% en moyenne"
+
+    if (label.includes("chiffres clés")) 
+      return "CA 2023: 1.2M€, 150 clients actifs, Ticket moyen: 3500€/mois, LTV: 24 mois, Taux de rétention: 85%"
+
+    if (label.includes("site web")) 
+      return "https://www.votreentreprise.com"
+
+    if (label.includes("méthodologie commerciale")) 
+      return "Prospection via LinkedIn (Social Selling) et emailing, Qualification BANT, Démos produit en 3 étapes"
+
+    if (label.includes("objections fréquentes")) 
+      return "1. 'C'est trop cher' → ROI démontré en 3 mois\n2. 'Nous le faisons en interne' → Comparaison coûts/résultats\n3. 'Pas le bon moment' → Offre d'audit gratuit"
+
+    if (label.includes("références clients")) 
+      return "Microsoft France (depuis 2021, +200 leads/mois), Salesforce (depuis 2022, +40% de conversion), SAP (projet de 6 mois, ROI de 300%)"
+
+    if (label.includes("concurrents")) 
+      return "Entreprise A (forces: prix bas, faiblesses: qualité), Entreprise B (forces: notoriété, faiblesses: délais longs)"
+
+    if (label.includes("lien de démo")) 
+      return "https://www.youtube.com/watch?v=votre-demo ou https://www.loom.com/share/votre-demo"
+
+    if (label.includes("icp") || label.includes("personas")) 
+      return "1. DSI de grands comptes (budget >100k€)\n2. Directeurs Marketing de PME tech\n3. CEO de startups B2B SaaS"
+
+    if (label.includes("secteurs préférentiels")) 
+      return "SaaS B2B, Services IT, Industrie 4.0, Cybersécurité"
+
+    if (label.includes("secteurs à éviter")) 
+      return "B2C, Retail traditionnel, Secteur public"
+
+    if (label.includes("taille d'entreprise cible")) 
+      return "PME et ETI, 50-1000 salariés, CA entre 10M€ et 100M€"
+
+    if (label.includes("email")) 
+      return "prenom.nom@entreprise.com"
+
+    if (label.includes("calendly")) 
+      return "https://calendly.com/votre-lien"
+
+    if (label.includes("crm")) 
+      return "Hubspot (API disponible), Compte existant à synchroniser, Champs personnalisés nécessaires: X, Y, Z"
+
+    if (label.includes("infos supplémentaires")) 
+      return "Projet de levée de fonds en cours, Ouverture internationale prévue en 2024, Contraintes spécifiques..."
+
+    // Placeholders par défaut selon le type
     switch (field.type) {
       case "textarea":
-        return (
-          <Textarea
-            id={field.id}
-            value={value as string}
-            onChange={(e) => handleInputChange(field.id, e.target.value)}
-            required={field.required}
-            className="w-full"
-            disabled={isSubmitting}
-          />
-        )
-
-      case "checkbox":
-        return (
-          <Checkbox
-            id={field.id}
-            checked={value as boolean}
-            onCheckedChange={(checked) => handleInputChange(field.id, checked)}
-            disabled={isSubmitting}
-          />
-        )
-
-      case "file":
-        return (
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <Input
-                type="file"
-                onChange={(e) => handleFileChange(field.id, e.target.files?.[0] || null)}
-                required={field.required && !response}
-                disabled={isSubmitting}
-                className="flex-1"
-              />
-              {file && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleFileChange(field.id, null)}
-                  disabled={isSubmitting}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-            
-            {(response?.value || file) && (
-              <div className="flex items-center gap-2 text-sm">
-                <FileIcon className="h-4 w-4 text-blue-600" />
-                <span className="font-medium">
-                  {file ? file.name : response?.value.split('/').pop()}
-                </span>
-                {response?.value && !file && (
-                  <a
-                    href={response.value}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="ml-2 inline-flex items-center gap-1 text-blue-600 hover:text-blue-800"
-                  >
-                    Voir <ExternalLink className="h-3 w-3" />
-                  </a>
-                )}
-              </div>
-            )}
-          </div>
-        )
-
+        return "Détaillez votre réponse ici..."
+      case "email":
+        return "email@exemple.com"
+      case "url":
+        return "https://www..."
       default:
-        return (
-          <Input
-            type={field.type}
-            id={field.id}
-            value={value as string}
-            onChange={(e) => handleInputChange(field.id, e.target.value)}
-            required={field.required}
-            className="w-full"
-            disabled={isSubmitting}
-          />
-        )
+        return `Saisissez ${label}`
     }
+  }
+
+  const renderField = (field: OnboardingField) => {
+    const value = formData[field.id]
+    const isSubmitting = submittingSections[field.section]
+
+    if (field.type === "file") {
+      return (
+        <FileField
+          clientId={clientId}
+          label=""
+          required={field.required}
+          onUpload={() => {
+            setDirtyFields((prev) => ({ ...prev, [field.id]: true }))
+          }}
+        />
+      )
+    }
+
+    if (field.type === "checkbox") {
+      return (
+        <Checkbox
+          id={field.id}
+          checked={value as boolean}
+          onCheckedChange={(checked) => handleInputChange(field.id, checked)}
+          disabled={isSubmitting}
+        />
+      )
+    }
+
+    if (field.type === "textarea") {
+      return (
+        <Textarea
+          id={field.id}
+          value={value as string}
+          onChange={(e) => handleInputChange(field.id, e.target.value)}
+          disabled={isSubmitting}
+          placeholder={getPlaceholder(field)}
+          className="min-h-[100px]"
+        />
+      )
+    }
+
+    return (
+      <Input
+        id={field.id}
+        type={field.type}
+        value={value as string}
+        onChange={(e) => handleInputChange(field.id, e.target.value)}
+        disabled={isSubmitting}
+        placeholder={getPlaceholder(field)}
+      />
+    )
   }
 
   // Group and sort fields by section
@@ -279,7 +317,6 @@ export function OnboardingForm({ clientId, fields, responses }: OnboardingFormPr
       acc[field.section] = []
     }
     acc[field.section].push(field)
-    // Sort fields within each section by order_in_section
     acc[field.section].sort((a, b) => (a.order_in_section || 0) - (b.order_in_section || 0))
     return acc
   }, {} as Record<OnboardingField['section'], OnboardingField[]>)
@@ -294,9 +331,11 @@ export function OnboardingForm({ clientId, fields, responses }: OnboardingFormPr
     'confirm'
   ]
 
-  // Check if a section has any dirty fields
+  // Check if a section has any dirty fields (excluding file fields)
   const isSectionDirty = (section: OnboardingField['section']) => {
-    return fieldsBySection[section].some((field) => dirtyFields[field.id])
+    return fieldsBySection[section].some((field) => 
+      field.type !== 'file' && dirtyFields[field.id]
+    )
   }
 
   return (
@@ -314,7 +353,7 @@ export function OnboardingForm({ clientId, fields, responses }: OnboardingFormPr
             </CardWithDividersHeader>
             <Separator />
             <CardWithDividersContent>
-              <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {fieldsBySection[section].map((field) => (
                   <div key={field.id} className="space-y-2">
                     <Label htmlFor={field.id} className="flex items-center gap-2">

@@ -31,7 +31,7 @@ export default function HomePage() {
           if (current) {
             router.push(`/clients/${current.id}`)
           } else {
-            router.push("/admin/clients-manager")
+            router.push("/admin/clients")
           }
           return
         }

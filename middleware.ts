@@ -2,6 +2,12 @@ import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
+
+// Routes que l'on veut ignorer complètement (ex : webhooks)
+const isBypassedRoute = createRouteMatcher([
+  '/api/webhook/clerk',
+])
+
 // Routes that don't require authentication
 const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
@@ -22,6 +28,11 @@ const supabase = createClient(
 )
 
 export default clerkMiddleware(async (auth, req) => {
+   // 🔁 Ne pas appliquer le middleware à ces routes
+   if (isBypassedRoute(req)) {
+    console.log("🛑 Middleware bypassed for:", req.nextUrl.pathname)
+    return NextResponse.next()
+  }
   const { userId } = await auth()
 
   // For admin routes, check if user has admin role in Supabase
@@ -52,9 +63,10 @@ export default clerkMiddleware(async (auth, req) => {
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Always run for API routes
+    // Exclure le webhook Clerk
+    '/((?!_next|api/webhook/clerk|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // Inclure toutes les API
     '/(api|trpc)(.*)',
   ],
 }
+

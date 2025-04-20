@@ -16,6 +16,11 @@ import {
   Home,
   ListChecks,
   FileText,
+  CalendarDays,
+  LayoutDashboard,
+  ActivitySquare,
+  Briefcase,
+  Users2,
 } from "lucide-react"
 import { useUser } from "@clerk/nextjs"
 import { createBrowserClient } from '@supabase/ssr'
@@ -48,12 +53,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     {
       title: "Vue d'ensemble",
       url: current?.id ? `/clients/${current.id}` : "#",
-      icon: Home,
+      icon: LayoutDashboard,
     },
     {
       title: "Rendez-vous",
       url: current?.id ? `/clients/${current.id}/meetings` : "#",
-      icon: Calendar,
+      icon: CalendarDays,
     },
     {
       title: "Listes de prospection",
@@ -61,7 +66,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: ListChecks,
     },
     {
-      title: "Onboarding",
+      title: "Details & docs",
       url: current?.id ? `/clients/${current.id}/details` : "#",
       icon: FileText,
     },
@@ -69,14 +74,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   
   const navProjects = [
     {
-      name: "Clients",
-      url: "/admin/clients-manager",
-      icon: PieChart,
+      name: "Vue globale",
+      url: "/admin/overview",
+      icon: ActivitySquare,
     },
     {
-      name: "Members",
+      name: "Clients",
+      url: "/admin/clients",
+      icon: Briefcase,
+    },
+    {
+      name: "Équipe interne",
       url: "/admin/members",
-      icon: Map,
+      icon: Users2,
     },
   ].filter(Boolean)
 

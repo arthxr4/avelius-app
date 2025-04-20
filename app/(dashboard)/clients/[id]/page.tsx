@@ -36,6 +36,13 @@ interface Analytics {
 
 type TimeRange = "1m" | "3m" | "year"
 
+interface DashboardData {
+  appointments: Appointment[]
+  contacts: Contact[]
+  analytics: Analytics
+  timeRanges: Record<TimeRange, { start: Date; end: Date }>
+}
+
 function getDateRangeFromType(type: TimeRange): { start: Date; end: Date } {
   const now = new Date()
   const currentWeekEnd = endOfWeek(now, { locale: fr })
@@ -137,12 +144,12 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   )
 }
 
-function groupAppointmentsByWeek(appointments: Appointment[], timeRange: TimeRange) {
+function groupAppointmentsByWeek(appointments: Appointment[], timeRange: TimeRange, timeRanges: DashboardData['timeRanges']) {
   if (!appointments.length) return []
 
-  const { start, end } = getDateRangeFromType(timeRange)
+  const { start, end } = timeRanges[timeRange]
   
-  // Filtrer les rendez-vous dans la plage de dates en utilisant created_at
+  // Filtrer les rendez-vous dans la plage de dates
   const filteredAppointments = appointments.filter(app => {
     const creationDate = new Date(app.created_at)
     return isWithinInterval(creationDate, { start, end })
@@ -377,25 +384,19 @@ function ActiveAppointmentsList({ appointments, isLoading }: {
 export default function ClientDashboard() {
   const params = useParams()
   const clientId = params.id as string
-  const [analytics, setAnalytics] = useState<Analytics | null>(null)
-  const [appointments, setAppointments] = useState<Appointment[]>([])
-  const [contacts, setContacts] = useState<Contact[]>([])
+  const [data, setData] = useState<DashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedView, setSelectedView] = useState<"upcoming" | "past">("upcoming")
   const [chartData, setChartData] = useState<{ week: string; appointments: number }[]>([])
   const [timeRange, setTimeRange] = useState<TimeRange>("1m")
 
-  // Mettre à jour les données du graphique quand les rendez-vous ou la plage de temps changent
   useEffect(() => {
-    if (appointments.length > 0) {
-      console.log("Appointments data:", appointments)
-      console.log("First appointment created_at:", appointments[0].created_at)
-      const data = groupAppointmentsByWeek(appointments, timeRange)
-      console.log("Chart data:", data)
-      setChartData(data)
+    if (data?.appointments.length) {
+      const newChartData = groupAppointmentsByWeek(data.appointments, timeRange, data.timeRanges)
+      setChartData(newChartData)
     }
-  }, [appointments, timeRange])
+  }, [data?.appointments, timeRange, data?.timeRanges])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -403,33 +404,16 @@ export default function ClientDashboard() {
         setIsLoading(true)
         setError(null)
 
-        // Récupérer les données en parallèle
-        const [analyticsRes, appointmentsRes, contactsRes] = await Promise.all([
-          fetch(`/api/get-analytics?client_id=${clientId}`, {
-            next: { revalidate: 60 }, // Cache pendant 1 minute
-          }),
-          fetch(`/api/get-appointments?client_id=${clientId}`, {
-            next: { revalidate: 60 }, // Cache pendant 1 minute
-          }),
-          fetch(`/api/get-contacts?client_id=${clientId}`, {
-            next: { revalidate: 60 }, // Cache pendant 1 minute
-          }),
-        ])
+        const response = await fetch(`/api/get-client-dashboard?client_id=${clientId}`, {
+          next: { revalidate: 60 }, // Cache pendant 1 minute
+        })
 
-        if (!analyticsRes.ok || !appointmentsRes.ok || !contactsRes.ok) {
+        if (!response.ok) {
           throw new Error("Failed to fetch data")
         }
 
-        const [analyticsData, appointmentsData, contactsData] = await Promise.all([
-          analyticsRes.json(),
-          appointmentsRes.json(),
-          contactsRes.json(),
-        ])
-
-        console.log("Fetched appointments:", appointmentsData)
-        setAnalytics(analyticsData)
-        setAppointments(appointmentsData)
-        setContacts(contactsData)
+        const dashboardData = await response.json()
+        setData(dashboardData)
       } catch (err) {
         console.error("Error fetching data:", err)
         setError("Failed to load data. Please try again later.")
@@ -464,7 +448,10 @@ export default function ClientDashboard() {
       })
 
       if (response.ok) {
-        setAppointments((prev) => prev.filter((app) => app.id !== appointmentId))
+        setData(prev => prev ? {
+          ...prev,
+          appointments: prev.appointments.filter((app) => app.id !== appointmentId)
+        } : null)
         toast.success("Le rendez-vous a été supprimé avec succès")
       } else {
         throw new Error("Failed to delete appointment")
@@ -476,15 +463,16 @@ export default function ClientDashboard() {
   }
 
   const handleUpdate = (updatedAppointment: Partial<Appointment>) => {
-    setAppointments((prev) =>
-      prev.map((app) =>
+    setData(prev => prev ? {
+      ...prev,
+      appointments: prev.appointments.map((app) =>
         app.id === updatedAppointment.id ? { ...app, ...updatedAppointment } : app
       )
-    )
+    } : null)
   }
 
   const now = new Date()
-  const filteredAppointments = appointments.filter((appointment) => {
+  const filteredAppointments = data?.appointments.filter((appointment) => {
     const appointmentDate = new Date(appointment.date)
     return selectedView === "upcoming" 
       ? appointmentDate > now 
@@ -495,14 +483,14 @@ export default function ClientDashboard() {
     return selectedView === "upcoming" 
       ? dateA - dateB
       : dateB - dateA
-  })
+  }) || []
 
   return (
     <div className="space-y-8">
       <div className="*:data-[slot=card]:shadow-xs grid grid-cols-1 md:grid-cols-3 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card">
         <AnalyticsCard
           title="Total Rendez-vous"
-          value={analytics?.totalAppointments || 0}
+          value={data?.analytics.totalAppointments || 0}
           trend="up"
           trendValue="+12.5%"
           description="Tendance à la hausse"
@@ -511,7 +499,7 @@ export default function ClientDashboard() {
         />
         <AnalyticsCard
           title="Total Prospects"
-          value={analytics?.totalProspects || 0}
+          value={data?.analytics.totalProspects || 0}
           trend="down"
           trendValue="-20%"
           description="Acquisition en baisse"
@@ -520,7 +508,7 @@ export default function ClientDashboard() {
         />
         <AnalyticsCard
           title="Taux de No-Show"
-          value={`${analytics?.noShowRate.toFixed(1) || 0}%`}
+          value={`${data?.analytics.noShowRate.toFixed(1) || 0}%`}
           trend="up"
           trendValue="+12.5%"
           description="Rétention forte"
@@ -611,8 +599,8 @@ export default function ClientDashboard() {
               Évolution des rendez-vous créés sur la période
             </div>
           </CardFooter>
-      </Card>
-        <ActiveAppointmentsList appointments={appointments} isLoading={isLoading} />
+        </Card>
+        <ActiveAppointmentsList appointments={data?.appointments || []} isLoading={isLoading} />
       </div>
 
       <div>

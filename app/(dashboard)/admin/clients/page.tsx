@@ -59,6 +59,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import { useRouter } from "next/navigation"
 
 type Client = {
   id: string
@@ -80,6 +81,7 @@ function ClientsTable({
   isLoading,
   onDelete,
 }: TableProps) {
+  const router = useRouter()
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -118,6 +120,9 @@ function ClientsTable({
           </Button>
         )
       },
+      cell: ({ row }) => (
+        <div className="font-medium">{row.getValue("name")}</div>
+      ),
     },
     {
       accessorKey: "created_at",
@@ -180,7 +185,7 @@ function ClientsTable({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => window.location.href = `/clients/${client.id}`}>
+                <DropdownMenuItem onClick={() => router.push(`/admin/clients/${client.id}`)}>
                   <Eye className="mr-2 h-4 w-4" />
                   Voir les détails
                 </DropdownMenuItem>
@@ -327,26 +332,37 @@ function ClientsTable({
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  Chargement...
-                </TableCell>
-              </TableRow>
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  {Array.from({ length: columns.length }).map((_, j) => (
+                    <TableCell key={j}>
+                      <Skeleton className="h-6 w-full" />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
             ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={(e) => {
+                    // Éviter la navigation si on clique sur la checkbox ou le menu d'actions
+                    const target = e.target as HTMLElement
+                    if (
+                      target.closest('input[type="checkbox"]') ||
+                      target.closest('[role="menuitem"]') ||
+                      target.closest('button')
+                    ) {
+                      return
+                    }
+                    router.push(`/admin/clients/${row.original.id}`)
+                  }}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -357,7 +373,7 @@ function ClientsTable({
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  Aucun client trouvé
+                  Aucun résultat.
                 </TableCell>
               </TableRow>
             )}
