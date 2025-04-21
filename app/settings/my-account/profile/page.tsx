@@ -242,7 +242,7 @@ export default function ProfilePage() {
                         {form.getValues("last_name")?.[0]}
                       </AvatarFallback>
                     </Avatar>
-                    <div>
+      <div>
                       <h3 className="mb-1 text-sm font-medium">Photo de profil</h3>
                       <div className="flex gap-2">
                         <Button
@@ -284,7 +284,7 @@ export default function ProfilePage() {
                       accept="image/*"
                       onChange={handleFileUpload}
                     />
-                  </div>
+      </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
@@ -313,8 +313,8 @@ export default function ProfilePage() {
                         </FormItem>
                       )}
                     />
-                  </div>
-                </div>
+      </div>
+    </div>
               </CardWithDividersContent>
               <Separator />
               <CardWithDividersFooter>

@@ -9,6 +9,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { usePathname } from "next/navigation"
+import { cn } from "@/lib/utils"
 
 export function NavMain({
   items,
@@ -19,15 +21,25 @@ export function NavMain({
     icon?: LucideIcon
   }[]
 }) {
+  const pathname = usePathname()
+
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Navigation</SidebarGroupLabel>
       <SidebarMenu>
-        {items.map((item) => (
+        {items.map((item, index) => (
           <SidebarMenuItem key={item.title}>
             <SidebarMenuButton tooltip={item.title} asChild>
-              <Link href={item.url}>
-                {item.icon && <item.icon />}
+              <Link
+                href={item.url}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                  pathname === item.url
+                    ? "bg-secondary"
+                    : ""
+                )}
+              >
+                {item.icon && <item.icon className="h-4 w-4" />}
                 <span>{item.title}</span>
               </Link>
             </SidebarMenuButton>

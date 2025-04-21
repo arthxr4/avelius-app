@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { CalendarDays, Users, ListChecks, PhoneCall, TrendingUp, CalendarX, Target, TrendingDown, ArrowUpCircle, ArrowDownCircle, Rocket, ThumbsUp, AlertTriangle, AlertCircle } from "lucide-react"
+import { CalendarDays, Users, ListChecks, PhoneCall, TrendingUp, CalendarX, Target, TrendingDown, ArrowUpCircle, ArrowDownCircle, Rocket, ThumbsUp, AlertTriangle, AlertCircle, ArrowUpDown } from "lucide-react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts"
 import { addDays, format } from "date-fns"
 import { DateRange } from "react-day-picker"
@@ -76,6 +76,7 @@ export default function AdminOverviewPage() {
   const [chartType, setChartType] = useState<'daily' | 'weekly'>('daily')
   const [isLoading, setIsLoading] = useState(true)
   const [contractStats, setContractStats] = useState<ContractStats[]>([])
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
   const fetchData = async () => {
     try {
@@ -118,6 +119,16 @@ export default function AdminOverviewPage() {
         </div>
       </div>
     )
+  }
+
+  const sortedContractStats = [...(contractStats || [])].sort((a, b) => {
+    const dateA = new Date(a.end_date).getTime()
+    const dateB = new Date(b.end_date).getTime()
+    return sortDirection === 'asc' ? dateA - dateB : dateB - dateA
+  })
+
+  const toggleSort = () => {
+    setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')
   }
 
   return (
@@ -295,7 +306,16 @@ export default function AdminOverviewPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Client</TableHead>
-                <TableHead>Fin de contrat</TableHead>
+                <TableHead>
+                  <Button
+                    variant="ghost"
+                    onClick={toggleSort}
+                    className="h-8 flex items-center gap-1 -ml-4"
+                  >
+                    Fin de période
+                    <ArrowUpDown className="h-4 w-4" />
+                  </Button>
+                </TableHead>
                 <TableHead>Jours restants</TableHead>
                 <TableHead>Objectif</TableHead>
                 <TableHead>RDV réalisés</TableHead>
@@ -303,7 +323,7 @@ export default function AdminOverviewPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {contractStats?.map((contract) => (
+              {sortedContractStats?.map((contract) => (
                 <TableRow 
                   key={contract.contract_id}
                   className="cursor-pointer hover:bg-muted/50"

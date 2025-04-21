@@ -2,6 +2,8 @@
 
 import { Folder, Forward, MoreHorizontal, Trash2, type LucideIcon } from "lucide-react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { cn } from "@/lib/utils"
 
 import {
   DropdownMenu,
@@ -30,6 +32,7 @@ export function NavProjects({
   }[]
 }) {
   const { isMobile } = useSidebar()
+  const pathname = usePathname()
 
   return (
     <SidebarGroup>
@@ -38,15 +41,21 @@ export function NavProjects({
         {projects.map((item) => (
           <SidebarMenuItem key={item.name}>
             <SidebarMenuButton tooltip={item.name} asChild>
-              <Link href={item.url}>
-                <item.icon />
+              <Link
+                href={item.url}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                  pathname === item.url
+                    ? "bg-secondary"
+                    : ""
+                )}
+              >
+                <item.icon className="h-4 w-4" />
                 <span>{item.name}</span>
               </Link>
             </SidebarMenuButton>
-        
           </SidebarMenuItem>
         ))}
-        
       </SidebarMenu>
     </SidebarGroup>
   )

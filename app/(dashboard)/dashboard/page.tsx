@@ -23,7 +23,7 @@ export default function DashboardPage() {
     if (current) {
       router.push(`/clients/${current.id}`)
     } else if (isAdmin) {
-      router.push("/admin/clients")
+      router.push("/admin/overview")
     }
   }, [isLoaded, isSignedIn, current, isAdmin, router])
 

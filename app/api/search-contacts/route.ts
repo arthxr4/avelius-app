@@ -12,27 +12,31 @@ export async function POST(req: Request) {
   try {
     const { client_id, search } = await req.json()
 
-    if (!client_id || !search) {
+    if (!client_id || search === undefined) {
       return NextResponse.json(
-        { error: "client_id et search sont requis" },
+        { error: "client_id est requis et search doit être défini" },
         { status: 400 }
       )
     }
 
     const supabase = await createServerSupabaseClient()
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("contacts")
       .select("*")
       .eq("client_id", client_id)
-      .or(
+
+    if (search) {
+      query = query.or(
         `first_name.ilike.%${search}%,` +
         `last_name.ilike.%${search}%,` +
         `email.ilike.%${search}%,` +
         `phone.ilike.%${search}%,` +
         `company.ilike.%${search}%`
       )
-      .limit(10)
+    }
+
+    const { data, error } = await query.limit(10)
 
     if (error) {
       console.error("❌ Erreur Supabase:", error.message)
