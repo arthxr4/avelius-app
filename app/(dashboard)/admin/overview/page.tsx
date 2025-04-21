@@ -132,8 +132,8 @@ export default function AdminOverviewPage() {
   }
 
   return (
-    <div className="container mx-auto space-y-8">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
         <div className="">
           <h1 className="text-xl font-bold">Vue d'ensemble</h1>
           <p className="text-sm text-muted-foreground">
@@ -145,7 +145,7 @@ export default function AdminOverviewPage() {
       </div>
 
       {/* Section 1: KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Rendez-vous</CardTitle>
@@ -218,13 +218,13 @@ export default function AdminOverviewPage() {
       {/* Section 2: Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Évolution des rendez-vous</CardTitle>
+          <CardTitle className="text-base sm:text-lg">Évolution des rendez-vous</CardTitle>
           <CardDescription>
             Nombre de rendez-vous {chartType === 'daily' ? 'par jour' : 'par semaine'}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[250px] w-full">
+          <div className="h-[200px] sm:h-[250px] w-full">
             {isLoading ? (
               <div className="h-full w-full flex items-center justify-center">
                 <p className="text-muted-foreground">Chargement...</p>
@@ -302,7 +302,7 @@ export default function AdminOverviewPage() {
           <p className="text-sm text-muted-foreground">Vue d'ensemble des contrats clients et de leur performance</p>
         </div>
         <div className="rounded-md border overflow-hidden">
-          <Table>
+          <Table className="min-w-full">
             <TableHeader>
               <TableRow>
                 <TableHead>Client</TableHead>
@@ -316,56 +316,69 @@ export default function AdminOverviewPage() {
                     <ArrowUpDown className="h-4 w-4" />
                   </Button>
                 </TableHead>
-                <TableHead>Jours restants</TableHead>
-                <TableHead>Objectif</TableHead>
-                <TableHead>RDV réalisés</TableHead>
+                <TableHead className="hidden sm:table-cell">Jours restants</TableHead>
+                <TableHead className="hidden sm:table-cell">Objectif</TableHead>
+                <TableHead className="hidden sm:table-cell">RDV réalisés</TableHead>
                 <TableHead>Performance</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedContractStats?.map((contract) => (
-                <TableRow 
-                  key={contract.contract_id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => router.push(`/admin/clients/${contract.client_id}`)}
-                >
-                  <TableCell className="font-medium">{contract.client_name}</TableCell>
-                  <TableCell>{format(new Date(contract.end_date), 'dd/MM/yyyy')}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1.5">
-                      {contract.days_remaining} jours
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1.5">
-                      {contract.goal} RDV
-                    </div>
-                  </TableCell>
-                  <TableCell>{contract.rdv_realised}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={cn(
-                      "gap-1",
-                      contract.performance >= contract.expected_performance + 10
-                        ? "text-green-500 border-green-500 bg-green-50" :
-                      contract.performance >= contract.expected_performance
-                        ? "text-blue-500 border-blue-500 bg-blue-50" :
-                      contract.performance >= contract.expected_performance - 10
-                        ? "text-yellow-500 border-yellow-500 bg-yellow-50" :
-                        "text-red-500 border-red-500 bg-red-50"
-                    )}>
-                      {contract.performance >= contract.expected_performance + 10 ? <Rocket className="h-3 w-3" /> :
-                       contract.performance >= contract.expected_performance ? <ThumbsUp className="h-3 w-3" /> :
-                       contract.performance >= contract.expected_performance - 10 ? <AlertTriangle className="h-3 w-3" /> :
-                       <AlertCircle className="h-3 w-3" />}
-                      {contract.performance}% 
-                      <span className="text-xs">
-                        ({(contract.performance - contract.expected_performance) >= 0 ? '+' : ''}
-                        {Math.round(contract.performance - contract.expected_performance)})
-                      </span>
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-4 w-[150px]" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+                    <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-[60px]" /></TableCell>
+                    <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-[60px]" /></TableCell>
+                    <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-[60px]" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                sortedContractStats.map((contract) => (
+                  <TableRow
+                    key={contract.contract_id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => router.push(`/admin/clients/${contract.client_id}`)}
+                  >
+                    <TableCell className="font-medium">{contract.client_name}</TableCell>
+                    <TableCell>{format(new Date(contract.end_date), 'dd/MM/yyyy')}</TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      <div className="flex items-center gap-1.5">
+                        {contract.days_remaining} jours
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      <div className="flex items-center gap-1.5">
+                        {contract.goal} RDV
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">{contract.rdv_realised}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={cn(
+                        "gap-1",
+                        contract.performance >= contract.expected_performance + 10
+                          ? "text-green-500 border-green-500 bg-green-50" :
+                        contract.performance >= contract.expected_performance
+                          ? "text-blue-500 border-blue-500 bg-blue-50" :
+                        contract.performance >= contract.expected_performance - 10
+                          ? "text-yellow-500 border-yellow-500 bg-yellow-50" :
+                          "text-red-500 border-red-500 bg-red-50"
+                      )}>
+                        {contract.performance >= contract.expected_performance + 10 ? <Rocket className="h-3 w-3" /> :
+                         contract.performance >= contract.expected_performance ? <ThumbsUp className="h-3 w-3" /> :
+                         contract.performance >= contract.expected_performance - 10 ? <AlertTriangle className="h-3 w-3" /> :
+                         <AlertCircle className="h-3 w-3" />}
+                        {contract.performance}% 
+                        <span className="text-xs hidden sm:inline">
+                          ({(contract.performance - contract.expected_performance) >= 0 ? '+' : ''}
+                          {Math.round(contract.performance - contract.expected_performance)})
+                        </span>
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>

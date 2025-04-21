@@ -98,14 +98,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
+      <SidebarHeader className="flex-shrink-0">
         <TeamSwitcher />
       </SidebarHeader>
-      <SidebarContent>
-        <NavMain items={clientLinks} />
-        {isAdmin && <NavProjects projects={navProjects} />}
+      <SidebarContent className="flex-1 overflow-y-auto">
+        <div className="flex flex-col gap-2">
+          <NavMain items={clientLinks} />
+          {isAdmin && <NavProjects projects={navProjects} />}
+        </div>
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="flex-shrink-0">
         <NavUser user={user} />
       </SidebarFooter>
       <SidebarRail />
