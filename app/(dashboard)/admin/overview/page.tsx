@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { CalendarDays, Users, ListChecks, PhoneCall, TrendingUp, CalendarX, Target, TrendingDown, ArrowUpCircle, ArrowDownCircle } from "lucide-react"
+import { CalendarDays, Users, ListChecks, PhoneCall, TrendingUp, CalendarX, Target, TrendingDown, ArrowUpCircle, ArrowDownCircle, Rocket, ThumbsUp, AlertTriangle, AlertCircle } from "lucide-react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts"
 import { addDays, format } from "date-fns"
 import { DateRange } from "react-day-picker"
@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface Stats {
   appointments: {
@@ -59,6 +60,7 @@ interface ContractStats {
   goal: number
   rdv_realised: number
   performance: number
+  expected_performance: number
   goal_status: 'En avance' | 'En retard'
   rdv_goal_delta: number
 }
@@ -121,10 +123,10 @@ export default function AdminOverviewPage() {
   return (
     <div className="container mx-auto space-y-8">
       <div className="flex justify-between items-center">
-      <div className="">
+        <div className="">
           <h1 className="text-xl font-bold">Vue d'ensemble</h1>
           <p className="text-sm text-muted-foreground">
-          Tableau de bord des performances globales de l'agence
+            Tableau de bord des performances globales de l'agence
           </p>
         </div>
         
@@ -140,10 +142,10 @@ export default function AdminOverviewPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoading ? "..." : stats?.appointments?.current || 0}
+              {isLoading ? <Skeleton className="h-6 w-14 mb-2" /> : stats?.appointments?.current || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              {isLoading ? "..." : 
+              {isLoading ? <Skeleton className="h-4 w-32" /> : 
                 `${formatChange(stats?.appointments?.change)}% vs période précédente`
               }
             </p>
@@ -157,10 +159,10 @@ export default function AdminOverviewPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoading ? "..." : stats?.clients?.current || 0}
+              {isLoading ? <Skeleton className="h-6 w-14 mb-2" /> : stats?.clients?.current || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              {isLoading ? "..." : 
+              {isLoading ? <Skeleton className="h-4 w-32" /> : 
                 `${formatChange(stats?.clients?.change)}% vs période précédente`
               }
             </p>
@@ -174,10 +176,10 @@ export default function AdminOverviewPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoading ? "..." : stats?.prospects?.current || 0}
+              {isLoading ? <Skeleton className="h-6 w-14 mb-2" /> : stats?.prospects?.current || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              {isLoading ? "..." : 
+              {isLoading ? <Skeleton className="h-4 w-32" /> : 
                 `${formatChange(stats?.prospects?.change)}% vs période précédente`
               }
             </p>
@@ -191,10 +193,10 @@ export default function AdminOverviewPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {isLoading ? "..." : stats?.averageAppointments?.current || 0}
+              {isLoading ? <Skeleton className="h-6 w-14 mb-2" /> : stats?.averageAppointments?.current || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              {isLoading ? "..." : 
+              {isLoading ? <Skeleton className="h-4 w-32" /> : 
                 `${formatChange(stats?.averageAppointments?.change)}% vs période précédente`
               }
             </p>
@@ -298,7 +300,6 @@ export default function AdminOverviewPage() {
                 <TableHead>Objectif</TableHead>
                 <TableHead>RDV réalisés</TableHead>
                 <TableHead>Performance</TableHead>
-                <TableHead>Statut</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -324,32 +325,23 @@ export default function AdminOverviewPage() {
                   <TableCell>
                     <Badge variant="outline" className={cn(
                       "gap-1",
-                      contract.performance >= 100 
+                      contract.performance >= contract.expected_performance + 10
                         ? "text-green-500 border-green-500 bg-green-50" :
-                      contract.performance >= 75 
+                      contract.performance >= contract.expected_performance
                         ? "text-blue-500 border-blue-500 bg-blue-50" :
-                      contract.performance >= 50 
+                      contract.performance >= contract.expected_performance - 10
                         ? "text-yellow-500 border-yellow-500 bg-yellow-50" :
                         "text-red-500 border-red-500 bg-red-50"
                     )}>
-                      {contract.performance >= 100 ? <TrendingUp className="h-3 w-3" /> :
-                       contract.performance >= 75 ? <ArrowUpCircle className="h-3 w-3" /> :
-                       contract.performance >= 50 ? <Target className="h-3 w-3" /> :
-                       <TrendingDown className="h-3 w-3" />}
-                      {contract.performance}%
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={cn(
-                      "gap-1",
-                      contract.goal_status === 'En avance' 
-                        ? "text-green-500 border-green-500 bg-green-50"
-                        : "text-red-500 border-red-500 bg-red-50"
-                    )}>
-                      {contract.goal_status === 'En avance' 
-                        ? <ArrowUpCircle className="h-3 w-3" />
-                        : <ArrowDownCircle className="h-3 w-3" />}
-                      {contract.goal_status}
+                      {contract.performance >= contract.expected_performance + 10 ? <Rocket className="h-3 w-3" /> :
+                       contract.performance >= contract.expected_performance ? <ThumbsUp className="h-3 w-3" /> :
+                       contract.performance >= contract.expected_performance - 10 ? <AlertTriangle className="h-3 w-3" /> :
+                       <AlertCircle className="h-3 w-3" />}
+                      {contract.performance}% 
+                      <span className="text-xs">
+                        ({(contract.performance - contract.expected_performance) >= 0 ? '+' : ''}
+                        {Math.round(contract.performance - contract.expected_performance)})
+                      </span>
                     </Badge>
                   </TableCell>
                 </TableRow>

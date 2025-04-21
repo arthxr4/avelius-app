@@ -165,6 +165,9 @@ export async function GET(req: NextRequest) {
       const daysRemaining = Math.max(0, Math.round(totalDays - daysElapsed))
       const performance = period.goal > 0 ? Math.round((periodAppointments.length / period.goal) * 100) : 0
       
+      // Calculer la performance attendue
+      const expectedPerformance = Math.round((daysElapsed / totalDays) * 100)
+      
       return {
         contract_id: period.contract_id,
         client_id: period.client_contracts.client_id,
@@ -174,7 +177,8 @@ export async function GET(req: NextRequest) {
         goal: period.goal,
         rdv_realised: periodAppointments.length,
         performance: performance,
-        goal_status: performance >= 100 ? 'En avance' : 'En retard',
+        expected_performance: expectedPerformance,
+        goal_status: performance >= expectedPerformance ? 'En avance' : 'En retard',
         rdv_goal_delta: periodAppointments.length - period.goal
       }
     })
