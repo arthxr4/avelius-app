@@ -119,14 +119,15 @@ export default function AdminOverviewPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-8">
+    <div className="container mx-auto space-y-8">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-semibold mb-2">Vue d'ensemble</h1>
-          <p className="text-muted-foreground">
-            Tableau de bord des performances globales de l'agence
+      <div className="">
+          <h1 className="text-xl font-bold">Vue d'ensemble</h1>
+          <p className="text-sm text-muted-foreground">
+          Tableau de bord des performances globales de l'agence
           </p>
         </div>
+        
         <DateRangePicker date={date} onDateChange={setDate} />
       </div>
 

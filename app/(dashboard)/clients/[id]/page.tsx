@@ -147,7 +147,28 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 function groupAppointmentsByWeek(appointments: Appointment[], timeRange: TimeRange, timeRanges: DashboardData['timeRanges']) {
   if (!appointments.length) return []
 
-  const { start, end } = timeRanges[timeRange]
+  const now = new Date()
+  const currentWeekEnd = endOfWeek(now, { locale: fr })
+  
+  // Calculer les plages de dates en fonction de la période sélectionnée
+  let start: Date
+  let end: Date = currentWeekEnd
+
+  switch (timeRange) {
+    case "1m":
+      // 4 dernières semaines en incluant la semaine en cours
+      start = startOfWeek(subWeeks(currentWeekEnd, 3), { locale: fr })
+      break
+    case "3m":
+      // 3 derniers mois en incluant le mois en cours
+      start = startOfWeek(subMonths(now, 2), { locale: fr })
+      break
+    case "year":
+      // Année en cours
+      start = startOfYear(now)
+      end = endOfYear(now)
+      break
+  }
   
   // Filtrer les rendez-vous dans la plage de dates
   const filteredAppointments = appointments.filter(app => {
@@ -487,7 +508,7 @@ export default function ClientDashboard() {
 
   return (
     <div className="space-y-8">
-      <div className="*:data-[slot=card]:shadow-xs grid grid-cols-1 md:grid-cols-3 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card">
+      <div className="*:data-[slot=card]:shadow-xs grid grid-cols-1 md:grid-cols-3 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card">
         <AnalyticsCard
           title="Total Rendez-vous"
           value={data?.analytics.totalAppointments || 0}
@@ -544,11 +565,11 @@ export default function ClientDashboard() {
           </CardHeader>
           <CardContent className="pt-4">
             {isLoading ? (
-              <div className="h-[350px] w-full">
+              <div className="h-[250px] w-full">
                 <Skeleton className="h-full w-full" />
               </div>
             ) : (
-              <div className="h-[350px] w-full">
+              <div className="h-[250px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
                     <CartesianGrid 
@@ -599,7 +620,7 @@ export default function ClientDashboard() {
               Évolution des rendez-vous créés sur la période
             </div>
           </CardFooter>
-        </Card>
+      </Card>
         <ActiveAppointmentsList appointments={data?.appointments || []} isLoading={isLoading} />
       </div>
 

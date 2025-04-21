@@ -52,11 +52,13 @@ export default async function ClientDetailsPage({
   }
 
   return (
-    <div className="container mx-auto py-6">
-      <h1 className="text-2xl font-semibold mb-2">Informations d'onboarding</h1>
-      <p className="text-muted-foreground mb-6">
-        Gérez les informations d'onboarding de ce client.
-      </p>
+    <div className="container mx-auto space-y-4">
+      <div className="">
+          <h1 className="text-xl font-bold">Informations générales</h1>
+          <p className="text-sm text-muted-foreground">
+            Détaillez les informations à savoir sur votre entreprise  
+          </p>
+        </div>
       <OnboardingForm
         clientId={params.id}
         fields={fields}

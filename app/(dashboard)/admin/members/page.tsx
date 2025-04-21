@@ -95,9 +95,15 @@ export default function MembersPage() {
   })
 
   return (
-    <div className="space-y-4 p-8">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Gestion des membres</h1>
+      <div className="">
+          <h1 className="text-xl font-bold">Équipe interne</h1>
+          <p className="text-sm text-muted-foreground">
+            Gestion des membres internes à Avelius
+          </p>
+        </div>
+        
         <AddMemberDialog onSuccess={fetchMembers} />
       </div>
       <Tabs defaultValue="active" className="space-y-4">

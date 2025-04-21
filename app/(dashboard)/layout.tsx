@@ -80,7 +80,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <ResponsiveSidebar />
       <AppSidebar />
       <SidebarInset>
-        <div className="flex flex-col gap-4 p-4">
+        <div className="flex flex-col gap-4 p-2 sm:py-4 lg:px-6">
           {children}
         </div>
       </SidebarInset>

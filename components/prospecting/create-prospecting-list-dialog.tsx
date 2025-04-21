@@ -22,7 +22,7 @@ import {
 import { toast } from "sonner"
 import Papa, { ParseResult } from "papaparse"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Loader2 } from "lucide-react"
+import { Loader2, PlusIcon } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 
 interface Contact {
@@ -190,7 +190,10 @@ export function CreateProspectingListDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>Nouvelle liste</Button>
+      <Button>
+          <PlusIcon className="mr-2 h-4 w-4" />
+          Nouvelle liste
+        </Button>
       </DialogTrigger>
       <DialogContent className="max-w-xl p-0">
         <div className="flex flex-col p-6 pb-11 gap-6">

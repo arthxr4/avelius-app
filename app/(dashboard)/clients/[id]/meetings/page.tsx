@@ -518,13 +518,14 @@ export function AppointmentTable({
 
 export default function MeetingsPage() {
   const params = useParams()
+  const clientId = params.id as string
   const [appointments, setAppointments] = React.useState<Appointment[]>([])
-  const [isLoading, setIsLoading] = React.useState(true)
+  const [loading, setLoading] = React.useState(true)
   const [cache, setCache] = React.useState<Record<string, Appointment[]>>({})
 
   // Afficher le skeleton immédiatement
   React.useEffect(() => {
-    setIsLoading(true)
+    setLoading(true)
   }, [params.id])
 
   const fetchAppointments = async () => {
@@ -532,7 +533,7 @@ export default function MeetingsPage() {
       // Vérifier le cache
       if (cache[params.id as string]) {
         setAppointments(cache[params.id as string])
-        setIsLoading(false)
+        setLoading(false)
         return
       }
 
@@ -546,7 +547,7 @@ export default function MeetingsPage() {
       console.error("Error fetching appointments:", error)
       toast.error("Erreur lors du chargement des rendez-vous")
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
@@ -600,25 +601,30 @@ export default function MeetingsPage() {
   )
 
   return (
-    <div className="space-y-4 p-8">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Vos rendez-vous</h2>
-        <AddAppointmentDialog
-          clientId={params.id as string}
+        <div className="">
+          <h1 className="text-xl font-bold">Rendez-vous</h1>
+          <p className="text-sm text-muted-foreground">
+            Planifiez et gérez les rendez-vous avec vos contacts
+          </p>
+        </div>
+        <AddAppointmentDialog 
+          clientId={clientId}
           onAppointmentCreated={(newAppointment) => {
             setAppointments(prev => [...prev, newAppointment])
-            if (cache[params.id as string]) {
+            if (cache[clientId]) {
               setCache(prev => ({
                 ...prev,
-                [params.id as string]: [...prev[params.id as string], newAppointment]
+                [clientId]: [...prev[clientId], newAppointment]
               }))
             }
           }}
         />
       </div>
 
-      <Tabs defaultValue="upcoming" className="w-full">
-        <TabsList className="inline-flex rounded-md bg-muted p-1 text-muted-foreground">
+      <Tabs defaultValue="upcoming" className="space-y-4">
+        <TabsList>
           <TabsTrigger value="upcoming">À venir</TabsTrigger>
           <TabsTrigger value="past">Passés</TabsTrigger>
           <TabsTrigger value="canceled">Annulés</TabsTrigger>
@@ -626,7 +632,7 @@ export default function MeetingsPage() {
         <TabsContent value="upcoming">
           <AppointmentTable
             data={upcomingAppointments}
-            isLoading={isLoading}
+            isLoading={loading}
             onDelete={handleDelete}
             onUpdate={handleUpdate}
           />
@@ -634,7 +640,7 @@ export default function MeetingsPage() {
         <TabsContent value="past">
           <AppointmentTable
             data={pastAppointments}
-            isLoading={isLoading}
+            isLoading={loading}
             onDelete={handleDelete}
             onUpdate={handleUpdate}
           />
@@ -642,7 +648,7 @@ export default function MeetingsPage() {
         <TabsContent value="canceled">
           <AppointmentTable
             data={canceledAppointments}
-            isLoading={isLoading}
+            isLoading={loading}
             onDelete={handleDelete}
             onUpdate={handleUpdate}
           />

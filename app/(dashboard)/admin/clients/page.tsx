@@ -525,7 +525,12 @@ export default function ClientsManagerPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Gestion des clients</h2>
+      <div className="">
+          <h1 className="text-xl font-bold">Clients</h1>
+          <p className="text-sm text-muted-foreground">
+            Ajouter, modifier ou supprimer un client.
+          </p>
+        </div>
         <AddClientDialog />
       </div>
 

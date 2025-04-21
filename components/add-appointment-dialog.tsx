@@ -231,7 +231,7 @@ export function AddAppointmentDialog({ clientId, onAppointmentCreated }: AddAppo
       <DialogTrigger asChild>
         <Button>
           <Plus className="mr-2 h-4 w-4" />
-          Ajouter un rendez-vous
+          Nouveau
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px] p-0">
