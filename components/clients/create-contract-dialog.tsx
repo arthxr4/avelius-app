@@ -13,11 +13,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { CalendarIcon, Loader2 } from "lucide-react"
 import { format } from "date-fns"
 import { fr } from "date-fns/locale"
-import { CalendarIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Calendar } from "@/components/ui/calendar"
 import {
@@ -26,12 +24,61 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { toast } from "sonner"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import * as z from "zod"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { DateRangePicker } from "@/components/date-range-picker"
+import { DateRange } from "react-day-picker"
 
 interface CreateContractDialogProps {
   clientId: string
   trigger?: React.ReactNode
   onSuccess?: () => void
 }
+
+const formSchema = z.object({
+  contractType: z.enum(["one-shot", "recurring"]),
+  dateRange: z.object({
+    from: z.date(),
+    to: z.date(),
+  }).optional(),
+  startDate: z.date({
+    required_error: "La date de début est requise",
+  }).optional(),
+  goal: z.string().min(1, "L'objectif est requis").refine((val) => !isNaN(parseInt(val)) && parseInt(val) > 0, {
+    message: "L'objectif doit être un nombre positif",
+  }),
+  recurrenceEvery: z.string().optional(),
+  recurrenceUnit: z.enum(["day", "week", "month"]).optional(),
+}).refine((data) => {
+  if (data.contractType === "one-shot" && !data.dateRange?.from && !data.dateRange?.to) {
+    return false
+  }
+  if (data.contractType === "recurring" && (!data.startDate || !data.recurrenceEvery || !data.recurrenceUnit)) {
+    return false
+  }
+  return true
+}, {
+  message: "Veuillez remplir tous les champs requis",
+  path: ["dateRange"],
+})
 
 export function CreateContractDialog({
   clientId,
@@ -40,34 +87,28 @@ export function CreateContractDialog({
 }: CreateContractDialogProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [contractType, setContractType] = useState<"one-shot" | "recurring">("one-shot")
-  const [startDate, setStartDate] = useState<Date>()
-  const [endDate, setEndDate] = useState<Date>()
-  const [goal, setGoal] = useState<string>("")
-  const [recurrenceUnit, setRecurrenceUnit] = useState<"day" | "week" | "month">("month")
-  const [recurrenceEvery, setRecurrenceEvery] = useState<string>("1")
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!startDate || (!endDate && contractType === "one-shot") || !goal) {
-      toast.error("Veuillez remplir tous les champs")
-      return
-    }
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      contractType: "one-shot",
+      recurrenceUnit: "month",
+      recurrenceEvery: "1",
+    },
+  })
 
-    if (contractType === "recurring" && (!recurrenceEvery || parseInt(recurrenceEvery) < 1)) {
-      toast.error("Veuillez spécifier une fréquence valide")
-      return
-    }
+  const contractType = form.watch("contractType")
 
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setLoading(true)
     try {
       // Calculer la date de fin de la première période pour un contrat récurrent
       let periodEndDate: Date | null = null
-      if (contractType === "recurring") {
-        periodEndDate = new Date(startDate)
-        const amount = parseInt(recurrenceEvery)
+      if (values.contractType === "recurring" && values.recurrenceEvery && values.recurrenceUnit && values.startDate) {
+        periodEndDate = new Date(values.startDate)
+        const amount = parseInt(values.recurrenceEvery)
         
-        switch (recurrenceUnit) {
+        switch (values.recurrenceUnit) {
           case "day":
             periodEndDate.setDate(periodEndDate.getDate() + amount - 1)
             break
@@ -81,34 +122,38 @@ export function CreateContractDialog({
         }
       }
 
-      // Créer le contrat (qui crée aussi automatiquement la première période)
-      const contractResponse = await fetch("/api/create-client-contract", {
+      const response = await fetch("/api/create-client-contract", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           client_id: clientId,
-          start_date: format(startDate, "yyyy-MM-dd"),
-          end_date: contractType === "one-shot" ? format(endDate!, "yyyy-MM-dd") : null,
-          is_recurring: contractType === "recurring",
-          recurrence_unit: contractType === "recurring" ? recurrenceUnit : null,
-          recurrence_every: contractType === "recurring" ? parseInt(recurrenceEvery) : null,
-          default_goal: parseInt(goal),
-          first_period_end: contractType === "recurring" ? format(periodEndDate!, "yyyy-MM-dd") : null,
+          start_date: values.contractType === "one-shot" 
+            ? format(values.dateRange!.from, "yyyy-MM-dd")
+            : format(values.startDate!, "yyyy-MM-dd"),
+          end_date: values.contractType === "one-shot" 
+            ? format(values.dateRange!.to, "yyyy-MM-dd")
+            : null,
+          is_recurring: values.contractType === "recurring",
+          recurrence_unit: values.contractType === "recurring" ? values.recurrenceUnit : null,
+          recurrence_every: values.contractType === "recurring" ? parseInt(values.recurrenceEvery!) : null,
+          default_goal: parseInt(values.goal),
+          first_period_end: values.contractType === "recurring" ? format(periodEndDate!, "yyyy-MM-dd") : null,
         }),
       })
 
-      if (!contractResponse.ok) {
+      if (!response.ok) {
         throw new Error("Erreur lors de la création du contrat")
       }
 
       toast.success(
-        contractType === "one-shot"
+        values.contractType === "one-shot"
           ? "Contrat one-shot créé avec succès"
           : "Contrat récurrent créé avec succès"
       )
       setOpen(false)
+      form.reset()
       onSuccess?.()
     } catch (error) {
       console.error("Erreur:", error)
@@ -121,136 +166,226 @@ export function CreateContractDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || <Button variant="outline">Définir les objectifs</Button>}
+        {trigger || <Button variant="outline">Créer un contrat client</Button>}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Définir les objectifs</DialogTitle>
-          <DialogDescription>
-            Créez un nouveau contrat et définissez les objectifs pour ce client.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label>Type de contrat</Label>
-              <RadioGroup
-                defaultValue="one-shot"
-                onValueChange={(value) => setContractType(value as "one-shot" | "recurring")}
-                className="flex gap-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="one-shot" id="one-shot" />
-                  <Label htmlFor="one-shot">One-shot</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="recurring" id="recurring" />
-                  <Label htmlFor="recurring">Récurrent</Label>
-                </div>
-              </RadioGroup>
-            </div>
-
-            {contractType === "recurring" && (
-              <div className="grid gap-2">
-                <Label>Fréquence</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="number"
-                    min="1"
-                    value={recurrenceEvery}
-                    onChange={(e) => setRecurrenceEvery(e.target.value)}
-                    className="w-20"
-                  />
-                  <select
-                    value={recurrenceUnit}
-                    onChange={(e) => setRecurrenceUnit(e.target.value as "day" | "week" | "month")}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="day">Jours</option>
-                    <option value="week">Semaines</option>
-                    <option value="month">Mois</option>
-                  </select>
-                </div>
-              </div>
-            )}
-
-            <div className="grid gap-2">
-              <Label>Date de début</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !startDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "PPP", { locale: fr }) : "Sélectionner une date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={startDate}
-                    onSelect={setStartDate}
-                    initialFocus
-                    locale={fr}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            {contractType === "one-shot" && (
-              <div className="grid gap-2">
-                <Label>Date de fin</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !endDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {endDate ? format(endDate, "PPP", { locale: fr }) : "Sélectionner une date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={endDate}
-                      onSelect={setEndDate}
-                      initialFocus
-                      locale={fr}
-                      disabled={(date) =>
-                        date < (startDate || new Date()) ||
-                        date < new Date()
-                      }
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            )}
-
-            <div className="grid gap-2">
-              <Label>Objectif {contractType === "recurring" ? `par ${recurrenceUnit === 'day' ? 'jour' : recurrenceUnit === 'week' ? 'semaine' : 'mois'}` : ""} de RDV</Label>
-              <Input
-                type="number"
-                min="1"
-                value={goal}
-                onChange={(e) => setGoal(e.target.value)}
-                placeholder="Nombre de RDV"
+      <DialogContent className="sm:max-w-[500px] p-0">
+        <div className="flex flex-col p-6 pb-11 gap-6">
+          <DialogHeader>
+            <DialogTitle>Créer un contrat client</DialogTitle>
+            <DialogDescription>
+              Configurez le type de contrat, la période et les objectifs à atteindre.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="contractType"
+                render={({ field }) => (
+                  <FormItem className="space-y-1">
+                    <FormLabel>Type de contrat</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="grid grid-cols-2 gap-4"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="one-shot" id="one-shot" />
+                          <FormLabel htmlFor="one-shot" className="font-normal">One-shot</FormLabel>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="recurring" id="recurring" />
+                          <FormLabel htmlFor="recurring" className="font-normal">Récurrent</FormLabel>
+                        </div>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Création..." : "Créer le contrat"}
+
+              <Separator />
+
+              {contractType === "recurring" ? (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="recurrenceEvery"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <FormLabel>Fréquence</FormLabel>
+                        <div className="flex gap-2">
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="1"
+                              {...field}
+                              className="w-20"
+                            />
+                          </FormControl>
+                          <FormField
+                            control={form.control}
+                            name="recurrenceUnit"
+                            render={({ field }) => (
+                              <FormControl>
+                                <Select
+                                  value={field.value}
+                                  onValueChange={field.onChange}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="day">Jours</SelectItem>
+                                    <SelectItem value="week">Semaines</SelectItem>
+                                    <SelectItem value="month">Mois</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </FormControl>
+                            )}
+                          />
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="startDate"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <FormLabel>Date de début</FormLabel>
+                        <FormControl>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "w-full justify-start text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value ? format(field.value, "PPP", { locale: fr }) : "Sélectionner une date"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                initialFocus
+                                locale={fr}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              ) : (
+                <FormField
+                  control={form.control}
+                  name="dateRange"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1">
+                      <FormLabel>Période du contrat</FormLabel>
+                      <FormControl>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {field.value?.from ? (
+                                field.value.to ? (
+                                  <>
+                                    {format(field.value.from, "dd LLL yyyy", { locale: fr })} -{" "}
+                                    {format(field.value.to, "dd LLL yyyy", { locale: fr })}
+                                  </>
+                                ) : (
+                                  format(field.value.from, "dd LLL yyyy", { locale: fr })
+                                )
+                              ) : (
+                                <span>Sélectionner une période</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              initialFocus
+                              mode="range"
+                              defaultMonth={field.value?.from}
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              numberOfMonths={2}
+                              locale={fr}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <FormField
+                control={form.control}
+                name="goal"
+                render={({ field }) => (
+                  <FormItem className="space-y-1">
+                    <FormLabel>Objectif par période</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="1"
+                        placeholder="Nombre de RDV"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </form>
+          </Form>
+        </div>
+        <DialogFooter className="bg-muted border-t px-6 py-4 rounded-b-lg">
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setOpen(false)
+                form.reset()
+              }}
+              disabled={loading}
+            >
+              Annuler
             </Button>
-          </DialogFooter>
-        </form>
+            <Button
+              onClick={form.handleSubmit(onSubmit)}
+              disabled={loading || !form.formState.isValid}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <span>Création...</span>
+                </>
+              ) : (
+                "Créer le contrat"
+              )}
+            </Button>
+          </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

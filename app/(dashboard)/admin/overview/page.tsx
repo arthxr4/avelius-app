@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface Stats {
   appointments: {
@@ -55,6 +56,7 @@ interface ContractStats {
   contract_id: string
   client_id: string
   client_name: string
+  start_date: string
   end_date: string
   days_remaining: number
   goal: number
@@ -131,13 +133,31 @@ export default function AdminOverviewPage() {
     setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')
   }
 
+  const now = new Date()
+  
+  const currentContracts = sortedContractStats.filter((contract) => {
+    const endDate = new Date(contract.end_date)
+    const startDate = new Date(contract.start_date)
+    return startDate <= now && endDate >= now
+  })
+
+  const futureContracts = sortedContractStats.filter((contract) => {
+    const startDate = new Date(contract.start_date)
+    return startDate > now
+  })
+
+  const pastContracts = sortedContractStats.filter((contract) => {
+    const endDate = new Date(contract.end_date)
+    return endDate < now
+  })
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 p-2 sm:py-4 lg:px-6 pb-20 md:pb-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
         <div className="">
-          <h1 className="text-xl font-bold">Vue d'ensemble</h1>
+          <h1 className="text-xl font-bold">Cockpit</h1>
           <p className="text-sm text-muted-foreground">
-            Tableau de bord des performances globales de l'agence
+            Vue d'ensemble des performances et des indicateurs clés de l'agence
           </p>
         </div>
         
@@ -148,7 +168,7 @@ export default function AdminOverviewPage() {
       <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Rendez-vous</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de rendez-vous</CardTitle>
             <CalendarDays className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -165,7 +185,7 @@ export default function AdminOverviewPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Clients Actifs</CardTitle>
+            <CardTitle className="text-sm font-medium">Clients actifs</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -182,7 +202,7 @@ export default function AdminOverviewPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Prospects Ajoutés</CardTitle>
+            <CardTitle className="text-sm font-medium">Prospects ajoutés</CardTitle>
             <ListChecks className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -199,7 +219,7 @@ export default function AdminOverviewPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Moy. RDV/Client</CardTitle>
+            <CardTitle className="text-sm font-medium">Moy. RDV/client</CardTitle>
             <PhoneCall className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -301,87 +321,311 @@ export default function AdminOverviewPage() {
           <h2 className="text-lg font-medium">Performance des contrats</h2>
           <p className="text-sm text-muted-foreground">Vue d'ensemble des contrats clients et de leur performance</p>
         </div>
-        <div className="rounded-md border overflow-hidden">
-          <Table className="min-w-full">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Client</TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    onClick={toggleSort}
-                    className="h-8 flex items-center gap-1 -ml-4"
-                  >
-                    Fin de période
-                    <ArrowUpDown className="h-4 w-4" />
-                  </Button>
-                </TableHead>
-                <TableHead className="hidden sm:table-cell">Jours restants</TableHead>
-                <TableHead className="hidden sm:table-cell">Objectif</TableHead>
-                <TableHead className="hidden sm:table-cell">RDV réalisés</TableHead>
-                <TableHead>Performance</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell><Skeleton className="h-4 w-[150px]" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
-                    <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-[60px]" /></TableCell>
-                    <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-[60px]" /></TableCell>
-                    <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-[60px]" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                sortedContractStats.map((contract) => (
-                  <TableRow
-                    key={contract.contract_id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => router.push(`/admin/clients/${contract.client_id}`)}
-                  >
-                    <TableCell className="font-medium">{contract.client_name}</TableCell>
-                    <TableCell>{format(new Date(contract.end_date), 'dd/MM/yyyy')}</TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <div className="flex items-center gap-1.5">
-                        {contract.days_remaining} jours
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <div className="flex items-center gap-1.5">
-                        {contract.goal} RDV
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">{contract.rdv_realised}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={cn(
-                        "gap-1",
-                        contract.performance >= contract.expected_performance + 10
-                          ? "text-green-500 border-green-500 bg-green-50" :
-                        contract.performance >= contract.expected_performance
-                          ? "text-blue-500 border-blue-500 bg-blue-50" :
-                        contract.performance >= contract.expected_performance - 10
-                          ? "text-yellow-500 border-yellow-500 bg-yellow-50" :
-                          "text-red-500 border-red-500 bg-red-50"
-                      )}>
-                        {contract.performance >= contract.expected_performance + 10 ? <Rocket className="h-3 w-3" /> :
-                         contract.performance >= contract.expected_performance ? <ThumbsUp className="h-3 w-3" /> :
-                         contract.performance >= contract.expected_performance - 10 ? <AlertTriangle className="h-3 w-3" /> :
-                         <AlertCircle className="h-3 w-3" />}
-                        {contract.performance}% 
-                        <span className="text-xs hidden sm:inline">
-                          ({(contract.performance - contract.expected_performance) >= 0 ? '+' : ''}
-                          {Math.round(contract.performance - contract.expected_performance)})
-                        </span>
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+
+        <Tabs defaultValue="current" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="current">En cours</TabsTrigger>
+            <TabsTrigger value="future">À venir</TabsTrigger>
+            <TabsTrigger value="past">Passés</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="current">
+            {isLoading || currentContracts.length > 0 ? (
+              <div className="rounded-md border overflow-hidden">
+                <Table className="min-w-full">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Client</TableHead>
+                      <TableHead>
+                        <Button
+                          variant="ghost"
+                          onClick={toggleSort}
+                          className="h-8 flex items-center gap-1 -ml-4"
+                        >
+                          Fin de période
+                          <ArrowUpDown className="h-4 w-4" />
+                        </Button>
+                      </TableHead>
+                      <TableHead className="hidden sm:table-cell">Jours restants</TableHead>
+                      <TableHead className="hidden sm:table-cell">Objectif</TableHead>
+                      <TableHead className="hidden sm:table-cell">RDV réalisés</TableHead>
+                      <TableHead>Performance</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      Array.from({ length: 5 }).map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell><Skeleton className="h-4 w-[150px]" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+                          <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-[60px]" /></TableCell>
+                          <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-[60px]" /></TableCell>
+                          <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-[60px]" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      currentContracts.map((contract) => (
+                        <TableRow
+                          key={contract.contract_id}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => router.push(`/admin/clients/${contract.client_id}`)}
+                        >
+                          <TableCell className="font-medium">{contract.client_name}</TableCell>
+                          <TableCell>{format(new Date(contract.end_date), 'dd/MM/yyyy')}</TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            <div className="flex items-center gap-1.5">
+                              {contract.days_remaining} jours
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            <div className="flex items-center gap-1.5">
+                              {contract.goal} RDV
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">{contract.rdv_realised}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={cn(
+                              "gap-1",
+                              contract.performance >= contract.expected_performance + 10
+                                ? "text-green-500 border-green-500 bg-green-50" :
+                              contract.performance >= contract.expected_performance
+                                ? "text-blue-500 border-blue-500 bg-blue-50" :
+                              contract.performance >= contract.expected_performance - 10
+                                ? "text-yellow-500 border-yellow-500 bg-yellow-50" :
+                                "text-red-500 border-red-500 bg-red-50"
+                            )}>
+                              {contract.performance >= contract.expected_performance + 10 ? <Rocket className="h-3 w-3" /> :
+                               contract.performance >= contract.expected_performance ? <ThumbsUp className="h-3 w-3" /> :
+                               contract.performance >= contract.expected_performance - 10 ? <AlertTriangle className="h-3 w-3" /> :
+                               <AlertCircle className="h-3 w-3" />}
+                              {contract.performance}%
+                              <span className="text-xs">
+                                ({contract.rdv_goal_delta >= 0 ? '+' : ''}{contract.rdv_goal_delta} rdv)
+                              </span>
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="flex h-[400px] items-center justify-center border-subtle border border-dashed rounded-md">
+                <div className="flex flex-col items-center justify-center gap-6">
+                  <div className="rounded-full bg-muted p-6">
+                    <Target className="h-10 w-10 text-default" />
+                  </div>
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <h3 className="font-semibold text-xl">Aucun contrat en cours</h3>
+                    <p className="text-mb text-muted-foreground">
+                      Il n'y a pas de contrats en cours pour le moment.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="future">
+            {isLoading || futureContracts.length > 0 ? (
+              <div className="rounded-md border overflow-hidden">
+                <Table className="min-w-full">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Client</TableHead>
+                      <TableHead>
+                        <Button
+                          variant="ghost"
+                          onClick={toggleSort}
+                          className="h-8 flex items-center gap-1 -ml-4"
+                        >
+                          Fin de période
+                          <ArrowUpDown className="h-4 w-4" />
+                        </Button>
+                      </TableHead>
+                      <TableHead className="hidden sm:table-cell">Jours restants</TableHead>
+                      <TableHead className="hidden sm:table-cell">Objectif</TableHead>
+                      <TableHead className="hidden sm:table-cell">RDV réalisés</TableHead>
+                      <TableHead>Performance</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      Array.from({ length: 5 }).map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell><Skeleton className="h-4 w-[150px]" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+                          <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-[60px]" /></TableCell>
+                          <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-[60px]" /></TableCell>
+                          <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-[60px]" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      futureContracts.map((contract) => (
+                        <TableRow
+                          key={contract.contract_id}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => router.push(`/admin/clients/${contract.client_id}`)}
+                        >
+                          <TableCell className="font-medium">{contract.client_name}</TableCell>
+                          <TableCell>{format(new Date(contract.end_date), 'dd/MM/yyyy')}</TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            <div className="flex items-center gap-1.5">
+                              {contract.days_remaining} jours
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            <div className="flex items-center gap-1.5">
+                              {contract.goal} RDV
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">{contract.rdv_realised}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={cn(
+                              "gap-1",
+                              contract.performance >= contract.expected_performance + 10
+                                ? "text-green-500 border-green-500 bg-green-50" :
+                              contract.performance >= contract.expected_performance
+                                ? "text-blue-500 border-blue-500 bg-blue-50" :
+                              contract.performance >= contract.expected_performance - 10
+                                ? "text-yellow-500 border-yellow-500 bg-yellow-50" :
+                                "text-red-500 border-red-500 bg-red-50"
+                            )}>
+                              {contract.performance >= contract.expected_performance + 10 ? <Rocket className="h-3 w-3" /> :
+                               contract.performance >= contract.expected_performance ? <ThumbsUp className="h-3 w-3" /> :
+                               contract.performance >= contract.expected_performance - 10 ? <AlertTriangle className="h-3 w-3" /> :
+                               <AlertCircle className="h-3 w-3" />}
+                              {contract.performance}%
+                              <span className="text-xs">
+                                ({contract.rdv_goal_delta >= 0 ? '+' : ''}{contract.rdv_goal_delta} rdv)
+                              </span>
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="flex h-[400px] items-center justify-center border-subtle border border-dashed rounded-md">
+                <div className="flex flex-col items-center justify-center gap-6">
+                  <div className="rounded-full bg-muted p-6">
+                    <Target className="h-10 w-10 text-default" />
+                  </div>
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <h3 className="font-semibold text-xl">Aucun contrat à venir</h3>
+                    <p className="text-mb text-muted-foreground">
+                      Il n'y a pas de contrats programmés pour le futur.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="past">
+            {isLoading || pastContracts.length > 0 ? (
+              <div className="rounded-md border overflow-hidden">
+                <Table className="min-w-full">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Client</TableHead>
+                      <TableHead>
+                        <Button
+                          variant="ghost"
+                          onClick={toggleSort}
+                          className="h-8 flex items-center gap-1 -ml-4"
+                        >
+                          Fin de période
+                          <ArrowUpDown className="h-4 w-4" />
+                        </Button>
+                      </TableHead>
+                      <TableHead className="hidden sm:table-cell">Jours restants</TableHead>
+                      <TableHead className="hidden sm:table-cell">Objectif</TableHead>
+                      <TableHead className="hidden sm:table-cell">RDV réalisés</TableHead>
+                      <TableHead>Performance</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      Array.from({ length: 5 }).map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell><Skeleton className="h-4 w-[150px]" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+                          <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-[60px]" /></TableCell>
+                          <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-[60px]" /></TableCell>
+                          <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-[60px]" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      pastContracts.map((contract) => (
+                        <TableRow
+                          key={contract.contract_id}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => router.push(`/admin/clients/${contract.client_id}`)}
+                        >
+                          <TableCell className="font-medium">{contract.client_name}</TableCell>
+                          <TableCell>{format(new Date(contract.end_date), 'dd/MM/yyyy')}</TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            <div className="flex items-center gap-1.5">
+                              {contract.days_remaining} jours
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            <div className="flex items-center gap-1.5">
+                              {contract.goal} RDV
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">{contract.rdv_realised}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={cn(
+                              "gap-1",
+                              contract.performance >= contract.expected_performance + 10
+                                ? "text-green-500 border-green-500 bg-green-50" :
+                              contract.performance >= contract.expected_performance
+                                ? "text-blue-500 border-blue-500 bg-blue-50" :
+                              contract.performance >= contract.expected_performance - 10
+                                ? "text-yellow-500 border-yellow-500 bg-yellow-50" :
+                                "text-red-500 border-red-500 bg-red-50"
+                            )}>
+                              {contract.performance >= contract.expected_performance + 10 ? <Rocket className="h-3 w-3" /> :
+                               contract.performance >= contract.expected_performance ? <ThumbsUp className="h-3 w-3" /> :
+                               contract.performance >= contract.expected_performance - 10 ? <AlertTriangle className="h-3 w-3" /> :
+                               <AlertCircle className="h-3 w-3" />}
+                              {contract.performance}%
+                              <span className="text-xs">
+                                ({contract.rdv_goal_delta >= 0 ? '+' : ''}{contract.rdv_goal_delta} rdv)
+                              </span>
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="flex h-[400px] items-center justify-center border-subtle border border-dashed rounded-md">
+                <div className="flex flex-col items-center justify-center gap-6">
+                  <div className="rounded-full bg-muted p-6">
+                    <Target className="h-10 w-10 text-default" />
+                  </div>
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <h3 className="font-semibold text-xl">Aucun contrat passé</h3>
+                    <p className="text-mb text-muted-foreground">
+                      Il n'y a pas de contrats terminés pour le moment.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )

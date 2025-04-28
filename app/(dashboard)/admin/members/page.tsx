@@ -11,7 +11,7 @@ import { Member } from "./columns"
 
 function MembersTableSkeleton() {
   return (
-    <div className="space-y-4 p-8">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-10 w-32" />
@@ -109,10 +109,10 @@ export default function MembersPage() {
       <Tabs defaultValue="active" className="space-y-4">
         <TabsList>
           <TabsTrigger value="active">
-            Utilisateurs ({activeMembers.length})
+            Utilisateurs
           </TabsTrigger>
           <TabsTrigger value="pending">
-            En attente ({pendingMembers.length})
+            En attente
           </TabsTrigger>
         </TabsList>
         <TabsContent value="active" className="space-y-4">

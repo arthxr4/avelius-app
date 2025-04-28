@@ -57,10 +57,18 @@ export function TeamSwitcher() {
   const pathname = usePathname()
   const { user: clerkUser } = useUser()
   const [isAdmin, setIsAdmin] = React.useState(false)
+  const [searchQuery, setSearchQuery] = React.useState("")
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
+
+  const filteredTeams = React.useMemo(() => {
+    if (!searchQuery) return teams
+    return teams.filter(team => 
+      team.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  }, [teams, searchQuery])
 
   React.useEffect(() => {
     const fetchUserRole = async () => {
@@ -147,7 +155,7 @@ export function TeamSwitcher() {
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
                 {current.name.charAt(0)}
               </div>
               <span className="flex-1 truncate text-left text-sm font-semibold">
@@ -162,22 +170,38 @@ export function TeamSwitcher() {
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
           >
-            <DropdownMenuLabel className="text-xs text-muted-foreground">
-              Sélection du client
-            </DropdownMenuLabel>
-            {teams.map((team, index) => (
-              <DropdownMenuItem
-                key={team.id}
-                onClick={() => handleSelect(team)}
-                className="gap-2 p-2"
-              >
-                <div className="flex size-6 items-center justify-center rounded-sm border bg-muted text-muted-foreground">
-                  {team.name.charAt(0)}
+            
+            <div className="px-2 py-2">
+              <Input
+                placeholder="Rechercher un client..."
+                className="h-8 w-full"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+              />
+            </div>
+            <div className="max-h-[300px] overflow-y-auto">
+              {filteredTeams.length === 0 ? (
+                <div className="px-2 py-4 text-sm text-muted-foreground text-center">
+                  Aucun client trouvé
                 </div>
-                <span>{team.name}</span>
-                <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
-              </DropdownMenuItem>
-            ))}
+              ) : (
+                filteredTeams.map((team, index) => (
+                  <DropdownMenuItem
+                    key={team.id}
+                    onClick={() => handleSelect(team)}
+                    className="gap-2 p-2"
+                  >
+                    <div className="flex size-6 items-center justify-center rounded-sm border bg-blue-50 text-blue-600">
+                      {team.name.charAt(0)}
+                    </div>
+                    <span className="font-medium">{team.name}</span>
+                    <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                ))
+              )}
+            </div>
             <DropdownMenuSeparator />
             {isAdmin && (
               <DropdownMenuItem className="gap-2 p-2" disabled>

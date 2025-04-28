@@ -120,7 +120,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
         </header>
         
-        <div className="flex flex-col gap-4 p-2 sm:py-4 lg:px-6 pb-20 md:pb-4">
+        <div className="flex flex-col gap-4">
           {children}
         </div>
 

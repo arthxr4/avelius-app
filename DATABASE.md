@@ -33,7 +33,7 @@
   },
   {
     "table_name": "contract_periods",
-    "columns": "id uuid, contract_id uuid, period_start date, period_end date, goal integer, rdv_realised integer, status text, performance_percent numeric, created_at timestamp with time zone, updated_at timestamp with time zone"
+    "columns": "id uuid, contract_id uuid, period_start date, period_end date, goal integer, status text, performance_percent numeric, created_at timestamp with time zone, updated_at timestamp with time zone"
   },
   {
     "table_name": "onboarding_fields",

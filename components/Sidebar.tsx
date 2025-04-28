@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 import { useUserRole } from "@/hooks/useUserRole"
 import { useIsAdmin } from "@/hooks/useIsAdmin"
-import { LayoutDashboard, Users, Phone, CalendarDays, Building2 } from "lucide-react"
+import { LayoutDashboard, Users, Phone, CalendarDays, Building2, Gauge } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 // ... autres imports ...
@@ -62,6 +62,12 @@ export default function Sidebar() {
               Admin
             </h2>
             <nav className="grid items-start gap-2">
+              <Link href="/admin/overview">
+                <Button variant="ghost" className="w-full justify-start">
+                  <Gauge className="mr-2 h-4 w-4" />
+                  Cockpit
+                </Button>
+              </Link>
               <Link href="/admin/clients">
                 <Button variant="ghost" className="w-full justify-start">
                   <Building2 className="mr-2 h-4 w-4" />

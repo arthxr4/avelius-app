@@ -118,8 +118,6 @@ export async function GET(req: NextRequest) {
             )
           )
         `)
-        .lte('period_start', today.toISOString())
-        .gte('period_end', today.toISOString())
         .order('period_start', { ascending: false })
     ])
 
@@ -158,20 +156,43 @@ export async function GET(req: NextRequest) {
     const contractStats = Object.values(latestPeriodsByClient || {}).map((period: any) => {
       const periodAppointments = appointmentsByPeriod.find(a => a.period_id === period.id)?.appointments || []
       const totalDays = (new Date(period.period_end).getTime() - new Date(period.period_start).getTime()) / (1000 * 60 * 60 * 24)
+      const now = new Date()
+      const periodStart = new Date(period.period_start)
+      
+      // Si la période n'a pas commencé, on met expectedPerformance et expectedAppointments à 0
+      if (periodStart > now) {
+        return {
+          contract_id: period.contract_id,
+          client_id: period.client_contracts.client_id,
+          client_name: period.client_contracts.clients.name,
+          start_date: period.period_start,
+          end_date: period.period_end,
+          days_remaining: Math.round(totalDays),
+          goal: period.goal,
+          rdv_realised: periodAppointments.length,
+          performance: period.goal > 0 ? Math.round((periodAppointments.length / period.goal) * 100) : 0,
+          expected_performance: 0,
+          goal_status: 'En avance',
+          rdv_goal_delta: periodAppointments.length // Pour une période future, tout RDV est en avance
+        }
+      }
+
       const daysElapsed = Math.min(
-        (new Date().getTime() - new Date(period.period_start).getTime()) / (1000 * 60 * 60 * 24),
+        (now.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24),
         totalDays
       )
       const daysRemaining = Math.max(0, Math.round(totalDays - daysElapsed))
       const performance = period.goal > 0 ? Math.round((periodAppointments.length / period.goal) * 100) : 0
       
-      // Calculer la performance attendue
+      // Calculer la performance attendue et le nombre de RDV attendus
       const expectedPerformance = Math.round((daysElapsed / totalDays) * 100)
+      const expectedAppointments = Math.round((daysElapsed / totalDays) * period.goal)
       
       return {
         contract_id: period.contract_id,
         client_id: period.client_contracts.client_id,
         client_name: period.client_contracts.clients.name,
+        start_date: period.period_start,
         end_date: period.period_end,
         days_remaining: daysRemaining,
         goal: period.goal,
@@ -179,7 +200,7 @@ export async function GET(req: NextRequest) {
         performance: performance,
         expected_performance: expectedPerformance,
         goal_status: performance >= expectedPerformance ? 'En avance' : 'En retard',
-        rdv_goal_delta: periodAppointments.length - period.goal
+        rdv_goal_delta: periodAppointments.length - expectedAppointments
       }
     })
 

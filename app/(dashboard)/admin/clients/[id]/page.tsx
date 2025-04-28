@@ -38,26 +38,32 @@ import {
 import { CreatePeriodDialog } from "@/components/clients/create-period-dialog"
 
 interface ContractPeriod {
-  id: string
-  contract_id: string
-  period_start: string
-  period_end: string
-  goal: number
-  rdv_realised: number
-  status: string
-  performance_percent: number
+  id: string;
+  contract_id: string;
+  period_start: string;
+  period_end: string;
+  goal: number;
+  rdv_realised: number;
+  status: 'active' | 'completed' | 'upcoming';
+  performance_percent: number;
+  days_remaining: number;
+  expected_performance: number;
+  performance_delta: number;
 }
 
 interface Contract {
-  id: string
-  client_id: string
-  start_date: string
-  end_date: string | null
-  is_recurring: boolean
-  recurrence_unit: string | null
-  recurrence_every: number | null
-  default_goal: number
-  periods: ContractPeriod[]
+  id: string;
+  client_id: string;
+  start_date: string;
+  end_date: string | null;
+  is_recurring: boolean;
+  recurrence_unit: 'day' | 'week' | 'month' | null;
+  recurrence_every: number | null;
+  default_goal: number;
+  status: 'active' | 'completed' | 'upcoming';
+  periods: ContractPeriod[];
+  expected_performance: number;
+  performance_delta: number;
 }
 
 interface Member {
@@ -74,20 +80,14 @@ interface Member {
 }
 
 interface ClientData {
-  client: {
-    id: string
-    name: string
-    created_at: string
-  }
-  members: Member[]
-  contracts: Contract[]
-  activeContract: Contract | null
-  documents: {
-    name: string
-    size: number
-    created_at: string
-    publicUrl: string
-  }[]
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  created_at: string;
+  contracts?: Contract[];
+  members?: any[];
+  documents?: any[];
 }
 
 export default function ClientPage() {
@@ -283,7 +283,7 @@ export default function ClientPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 p-2 sm:py-4 lg:px-6 pb-20 md:pb-4">
         <div className="h-8 w-64 animate-pulse rounded-md bg-muted" />
         <div className="grid grid-cols-1 gap-6 md:grid-cols-7">
           <div className="space-y-6 md:col-span-5">
@@ -316,34 +316,31 @@ export default function ClientPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-2 sm:py-4 lg:px-6 pb-20 md:pb-4">
       {/* En-tête */}
       <div className="flex items-start justify-between">
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">{clientData?.client?.name || 'Client'}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{clientData?.name}</h1>
           <p className="text-sm text-muted-foreground">ID: {clientId}</p>
         </div>
         <div className="flex items-center gap-2">
-          <CreatePeriodDialog
-            clientId={clientId}
-            trigger={
-              <Button variant="outline">
-                <Plus className="mr-2 h-4 w-4" />
-                Créer une période
-              </Button>
-            }
-            onSuccess={() => setRefreshKey(prev => prev + 1)}
-          />
-          <CreateContractDialog
-            clientId={clientId}
-            trigger={
-              <Button>
-                <Target className="mr-2 h-4 w-4" />
-                Définir les objectifs
-              </Button>
-            }
-            onSuccess={() => setRefreshKey(prev => prev + 1)}
-          />
+          {clientData && clientData.contracts && clientData.contracts.length > 0 ? (
+            <Button>
+              <Clock className="mr-2 h-4 w-4" />
+              Gérer le contrat
+            </Button>
+          ) : (
+            <CreateContractDialog
+              clientId={clientId}
+              trigger={
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Créer un contrat
+                </Button>
+              }
+              onSuccess={() => setRefreshKey(prev => prev + 1)}
+            />
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
@@ -360,219 +357,266 @@ export default function ClientPage() {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-7">
         {/* Colonne principale */}
         <div className="space-y-6 md:col-span-5">
-          {/* Section Contrat actif / Période en cours */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Contrat actif / Période en cours</CardTitle>
-                <CardDescription>Suivi de la période actuelle</CardDescription>
-              </div>
-              {clientData?.activeContract && (
-                <Button variant="outline">
-                  <Clock className="mr-2 h-4 w-4" />
-                  Gérer le contrat
-                </Button>
-              )}
-            </CardHeader>
-            <CardContent>
-              {clientData?.activeContract ? (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Type de contrat</p>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">
-                            {clientData.activeContract.is_recurring ? 'Récurrent' : 'One-shot'}
-                          </Badge>
-                          {clientData.activeContract.is_recurring && (
-                            <Badge variant="secondary">
-                              {clientData.activeContract.recurrence_every}{' '}
-                              {clientData.activeContract.recurrence_unit === 'month' ? 'mois' : 'jours'}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Dates du contrat</p>
-                        <p className="font-medium">
-                          {formatDate(clientData.activeContract.start_date)} -{' '}
-                          {clientData.activeContract.end_date ? formatDate(clientData.activeContract.end_date) : '∞'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Objectif par défaut</p>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-base">
-                            {clientData.activeContract.default_goal} RDV
-                          </Badge>
-                          {clientData.activeContract.is_recurring && (
-                            <span className="text-sm text-muted-foreground">par période</span>
-                          )}
-                        </div>
-                      </div>
-                      {clientData.activeContract.periods[0] && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">Période en cours</p>
-                          <div className="space-y-3">
+          {/* Section Contrat */}
+          <div className={`grid gap-6 grid-cols-1 ${clientData && clientData.contracts && clientData.contracts.length > 0 ? 'md:grid-cols-2' : 'md:col-span-2'}`}>
+            <Card className={clientData && clientData.contracts && clientData.contracts.length > 0 ? '' : 'md:col-span-2'}>
+              <CardHeader>
+                <CardTitle>Contrat</CardTitle>
+                <CardDescription>Détails du contrat client</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {clientData && clientData.contracts && clientData.contracts.length > 0 ? (
+                  <div className="space-y-6">
+                    {clientData.contracts.map((contract) => (
+                      <div key={contract.id} className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               <Badge variant={
-                                clientData.activeContract.periods[0].status === 'active' ? 'default' :
-                                clientData.activeContract.periods[0].status === 'completed' ? 'secondary' :
+                                contract.status === 'active' ? 'default' :
+                                contract.status === 'completed' ? 'secondary' :
                                 'outline'
                               }>
-                                {clientData.activeContract.periods[0].status === 'active' ? 'En cours' :
-                                 clientData.activeContract.periods[0].status === 'completed' ? 'Terminée' :
+                                {contract.status === 'active' ? 'Actif' :
+                                 contract.status === 'completed' ? 'Terminé' :
                                  'À venir'}
                               </Badge>
-                              <span className="text-sm">
-                                {formatDate(clientData.activeContract.periods[0].period_start)} -{' '}
-                                {formatDate(clientData.activeContract.periods[0].period_end)}
-                              </span>
+                              <Badge variant="outline">
+                                {contract.is_recurring ? 'Récurrent' : 'One-shot'}
+                              </Badge>
+                              {contract.is_recurring && (
+                                <Badge variant="secondary">
+                                  {contract.recurrence_every}{' '}
+                                  {contract.recurrence_unit === 'month' ? 'mois' : 'jours'}
+                                </Badge>
+                              )}
                             </div>
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-muted-foreground">Progression</span>
-                                <span className="text-sm font-medium">
-                                  {clientData.activeContract.periods[0].rdv_realised} /{' '}
-                                  {clientData.activeContract.periods[0].goal} RDV
+                            <p className="text-sm text-muted-foreground">
+                              Du {formatDate(contract.start_date)} {contract.end_date ? `au ${formatDate(contract.end_date)}` : ''}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-medium">Objectif par défaut</p>
+                            <p className="text-2xl font-bold">{contract.default_goal} RDV</p>
+                          </div>
+                        </div>
+                        {contract.status === 'active' && (
+                          <Button variant="outline" className="w-full">
+                            <Clock className="mr-2 h-4 w-4" />
+                            Gérer le contrat
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex min-h-[200px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+                    <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
+                      <CalendarDays className="h-10 w-10 text-muted-foreground" />
+                      <h3 className="mt-4 text-lg font-semibold">Aucun contrat</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Ce client n'a pas encore de contrat. Créez un contrat pour commencer le suivi.
+                      </p>
+                      <CreateContractDialog
+                        clientId={clientId}
+                        trigger={
+                          <Button className="mt-4">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Créer un contrat
+                          </Button>
+                        }
+                        onSuccess={() => setRefreshKey(prev => prev + 1)}
+                      />
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {clientData && clientData.contracts && clientData.contracts.some(c => c.status === 'active' && c.periods.length > 0) ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Période en cours</CardTitle>
+                  <CardDescription>Suivi de la période actuelle</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {clientData.contracts
+                    .filter(c => c.status === 'active')
+                    .map(contract => {
+                      const activePeriod = contract.periods.find(p => p.status === 'active')
+                      if (!activePeriod) return null
+                      
+                      return (
+                        <div key={activePeriod.id} className="space-y-4">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="default">En cours</Badge>
+                                <span className="text-sm">
+                                  {formatDate(activePeriod.period_start)} - {formatDate(activePeriod.period_end)}
                                 </span>
                               </div>
-                              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                                <div
-                                  className="h-full bg-primary transition-all"
-                                  style={{
-                                    width: `${Math.min(
-                                      (clientData.activeContract.periods[0].rdv_realised /
-                                        clientData.activeContract.periods[0].goal) *
-                                        100,
-                                      100
-                                    )}%`,
-                                  }}
-                                />
-                              </div>
-                              <div className="flex justify-end">
-                                <Badge variant="outline">
-                                  {clientData.activeContract.periods[0].performance_percent}% réalisé
-                                </Badge>
-                              </div>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {activePeriod.days_remaining} jours restants
+                            </p>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">Progression</span>
+                              <span className="text-sm font-medium">
+                                {activePeriod.rdv_realised} / {activePeriod.goal} RDV
+                              </span>
+                            </div>
+                            <div className="h-2 rounded-full bg-muted overflow-hidden">
+                              <div
+                                className="h-full bg-primary transition-all"
+                                style={{
+                                  width: `${Math.min(
+                                    (activePeriod.rdv_realised / activePeriod.goal) * 100,
+                                    100
+                                  )}%`,
+                                }}
+                              />
+                            </div>
+                            <div className="flex justify-end">
+                              <Badge variant="outline">
+                                {activePeriod.performance_percent}% réalisé
+                              </Badge>
                             </div>
                           </div>
                         </div>
-                      )}
+                      )
+                    })}
+                </CardContent>
+              </Card>
+            ) : clientData && clientData.contracts && clientData.contracts.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Période en cours</CardTitle>
+                  <CardDescription>Aucune période active</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col items-center justify-center py-8 gap-4">
+                    <CalendarDays className="h-8 w-8 text-muted-foreground" />
+                    <div className="text-center">
+                      <p className="text-sm font-medium">Pas de période active</p>
+                      <p className="text-sm text-muted-foreground">
+                        Créez une nouvelle période pour commencer le suivi
+                      </p>
                     </div>
+                    <CreatePeriodDialog
+                      clientId={clientId}
+                      trigger={
+                        <Button>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Créer une période
+                        </Button>
+                      }
+                      onSuccess={() => setRefreshKey(prev => prev + 1)}
+                    />
                   </div>
-                </div>
-              ) : (
-                <div className="flex min-h-[200px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-                  <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
-                    <CalendarDays className="h-10 w-10 text-muted-foreground" />
-                    <h3 className="mt-4 text-lg font-semibold">Aucun contrat actif</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Aucun contrat n'est actuellement actif pour ce client. Créez un nouveau contrat pour commencer le suivi.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            )}
+          </div>
 
           {/* Section Périodes & Objectifs */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Périodes & Objectifs</CardTitle>
-                <CardDescription>Historique et suivi des périodes</CardDescription>
-              </div>
-              <CreatePeriodDialog
-            clientId={clientId}
-            trigger={
-              <Button variant="outline">
-                <Plus className="mr-2 h-4 w-4" />
-                Créer une période
-              </Button>
-            }
-            onSuccess={() => setRefreshKey(prev => prev + 1)}
-          />
-            </CardHeader>
-            <CardContent>
-              {clientData?.contracts?.some(contract => contract.periods.length > 0) ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Contrat</TableHead>
-                      <TableHead>Période</TableHead>
-                      <TableHead>Objectif</TableHead>
-                      <TableHead>RDV réalisés</TableHead>
-                      <TableHead>Performance</TableHead>
-                      <TableHead>Statut</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {clientData.contracts.flatMap(contract =>
-                      contract.periods.map(period => (
-                        <TableRow key={period.id}>
-                          <TableCell className="font-medium">
-                            {contract.is_recurring ? 'Récurrent' : 'One-shot'}
-                          </TableCell>
-                          <TableCell>
-                            {formatDate(period.period_start)} - {formatDate(period.period_end)}
-                          </TableCell>
-                          <TableCell>{period.goal} RDV</TableCell>
-                          <TableCell>{period.rdv_realised}</TableCell>
-                          <TableCell>{period.performance_percent}%</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Badge variant={period.status === 'completed' ? 'default' : 'secondary'}>
-                                {period.status === 'completed' ? 'Terminée' : 'En cours'}
-                              </Badge>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={() => {
-                                      setPeriodToEdit(period)
-                                      setNewGoal(period.goal)
-                                    }}
-                                  >
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                    Modifier l'objectif
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => setPeriodToDelete(period)}
-                                    className="text-destructive hover:bg-destructive/10 data-[highlighted]:text-destructive data-[highlighted]:bg-destructive/10"
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Supprimer la période
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="flex min-h-[200px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-                  <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
-                    <Target className="h-10 w-10 text-muted-foreground" />
-                    <h3 className="mt-4 text-lg font-semibold">Aucune période enregistrée</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Créez une première période et définissez les objectifs pour commencer le suivi des performances.
-                    </p>
-                  </div>
+          {clientData?.contracts && clientData.contracts.length > 0 && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Périodes & Objectifs</CardTitle>
+                  <CardDescription>Historique et suivi des périodes</CardDescription>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                <CreatePeriodDialog
+                  clientId={clientId}
+                  trigger={
+                    <Button variant="outline">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Créer une période
+                    </Button>
+                  }
+                  onSuccess={() => setRefreshKey(prev => prev + 1)}
+                />
+              </CardHeader>
+              <CardContent>
+                {clientData && clientData.contracts && clientData.contracts.some(contract => contract.periods.length > 0) ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Contrat</TableHead>
+                        <TableHead>Période</TableHead>
+                        <TableHead>Objectif</TableHead>
+                        <TableHead>RDV réalisés</TableHead>
+                        <TableHead>Performance</TableHead>
+                        <TableHead>Statut</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {clientData.contracts.flatMap(contract =>
+                        contract.periods.map(period => (
+                          <TableRow key={period.id}>
+                            <TableCell className="font-medium">
+                              {contract.is_recurring ? 'Récurrent' : 'One-shot'}
+                            </TableCell>
+                            <TableCell>
+                              {formatDate(period.period_start)} - {formatDate(period.period_end)}
+                            </TableCell>
+                            <TableCell>{period.goal} RDV</TableCell>
+                            <TableCell>{period.rdv_realised}</TableCell>
+                            <TableCell>{period.performance_percent}%</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Badge variant={period.status === 'completed' ? 'default' : 'secondary'}>
+                                  {period.status === 'completed' ? 'Terminée' : 'En cours'}
+                                </Badge>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setPeriodToEdit(period)
+                                        setNewGoal(period.goal)
+                                      }}
+                                    >
+                                      <Pencil className="mr-2 h-4 w-4" />
+                                      Modifier l'objectif
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => setPeriodToDelete(period)}
+                                      className="text-destructive hover:bg-destructive/10 data-[highlighted]:text-destructive data-[highlighted]:bg-destructive/10"
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Supprimer la période
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="flex min-h-[200px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+                    <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
+                      <Target className="h-10 w-10 text-muted-foreground" />
+                      <h3 className="mt-4 text-lg font-semibold">Aucune période enregistrée</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Créez une première période et définissez les objectifs pour commencer le suivi des performances.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Section Membres */}
           <Card>
@@ -584,16 +628,16 @@ export default function ClientPage() {
               <AddMemberDialog
                 clientId={clientId}
                 trigger={
-                  <Button>
+                  <Button variant="outline">
                     <Plus className="mr-2 h-4 w-4" />
-                    Ajouter un membre
+                    Inviter
                   </Button>
                 }
                 onSuccess={() => setRefreshKey(prev => prev + 1)}
               />
             </CardHeader>
             <CardContent>
-              {clientData?.members && clientData.members.length > 0 ? (
+              {clientData && clientData.members && clientData.members.length > 0 ? (
                 <div className="space-y-4">
                   {clientData.members.map((member: Member) => (
                     <div key={member.id} className="flex items-center justify-between">
@@ -794,14 +838,14 @@ export default function ClientPage() {
                   onChange={handleFileUpload}
                   id="file-upload"
                 />
-                <Button onClick={() => document.getElementById('file-upload')?.click()}>
+                <Button variant="outline" onClick={() => document.getElementById('file-upload')?.click()}>
                   <Plus className="mr-2 h-4 w-4" />
-                  Ajouter un document
+                  Ajouter
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
-              {clientData?.documents && clientData.documents.length > 0 ? (
+              {clientData && clientData.documents && clientData.documents.length > 0 ? (
                 <div className="space-y-4">
                   {clientData.documents.map((doc) => (
                     <div key={doc.name} className="flex items-center justify-between">
@@ -874,7 +918,7 @@ export default function ClientPage() {
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Client(e) depuis</p>
                 <p className="text-sm">
-                  {formatDate(clientData?.client?.created_at)}
+                  {formatDate(clientData?.created_at)}
                 </p>
               </div>
               <div className="space-y-1">

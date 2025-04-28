@@ -113,24 +113,40 @@ export async function GET(req: Request) {
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString().split('T')[0]
 
-  const activeContract = contracts?.find(contract => {
-    if (contract.is_recurring) {
-      return contract.start_date <= today
+  const contractsWithStatus = contracts?.map(contract => {
+    let status = 'upcoming'
+    if (contract.start_date <= today) {
+      if (!contract.end_date || contract.end_date >= today) {
+        status = 'active'
+      } else {
+        status = 'completed'
+      }
     }
-    return contract.start_date <= today && contract.end_date >= today
-  }) || null
+    return {
+      ...contract,
+      status
+    }
+  }) || []
 
   // Associer les périodes à leurs contrats respectifs
-  const contractsWithPeriods = contracts?.map(contract => {
+  const contractsWithPeriods = contractsWithStatus.map(contract => {
     const contractPeriods = periodsWithAppointments
       .filter(period => period.contract_id === contract.id)
       .sort((a, b) => new Date(b.period_start).getTime() - new Date(a.period_start).getTime())
+      .map(period => ({
+        ...period,
+        status: period.period_start <= today && period.period_end >= today ? 'active' : 
+                period.period_end < today ? 'completed' : 'upcoming'
+      }))
     
     return {
       ...contract,
       periods: contractPeriods
     }
-  }) || []
+  })
+
+  // Trouver le contrat actif pour la rétrocompatibilité
+  const activeContract = contractsWithStatus.find(contract => contract.status === 'active') || null
 
   // Pour le contrat actif, on veut la période en cours ou la plus récente
   const activeContractWithPeriods = activeContract ? {
@@ -174,7 +190,7 @@ export async function GET(req: Request) {
 
   // Formater la réponse
   return NextResponse.json({
-    client,
+    ...client,
     members: members || [],
     contracts: contractsWithPeriods,
     activeContract: activeContractWithPeriods,

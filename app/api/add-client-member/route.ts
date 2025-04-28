@@ -25,36 +25,6 @@ export async function POST(request: Request) {
     const protocol = process.env.NODE_ENV === "development" ? "http" : "https"
     const redirectUrl = `${protocol}://${host}/sign-up`
 
-    // Créer l'invitation via Clerk
-    const response = await fetch("https://api.clerk.com/v1/invitations", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email_address: validatedData.email,
-        redirect_url: redirectUrl,
-        public_metadata: {
-          role: "manager",
-        },
-      }),
-    })
-
-    if (!response.ok) {
-      const errorData = await response.text()
-      console.error("Clerk invitation error:", errorData)
-      return new NextResponse(errorData, { 
-        status: response.status,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      })
-    }
-
-    const clerkData = await response.json()
-    const invitationId = clerkData.id
-
     // Initialiser Supabase
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -74,8 +44,41 @@ export async function POST(request: Request) {
       .eq("email", validatedData.email)
       .single()
 
-    // Si l'utilisateur n'existe pas, le créer
+    let invitationId = null
+
+    // Si l'utilisateur n'existe pas, le créer et créer l'invitation Clerk
     if (!existingUser) {
+      // Créer l'invitation via Clerk
+      const response = await fetch("https://api.clerk.com/v1/invitations", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email_address: validatedData.email,
+          redirect_url: redirectUrl,
+          public_metadata: {
+            role: "manager",
+          },
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.text()
+        console.error("Clerk invitation error:", errorData)
+        return new NextResponse(errorData, { 
+          status: response.status,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+      }
+
+      const clerkData = await response.json()
+      invitationId = clerkData.id
+
+      // Créer l'utilisateur dans Supabase
       const { error: userError } = await supabase
         .from("users")
         .insert({
@@ -91,6 +94,9 @@ export async function POST(request: Request) {
         console.error("Error creating user in Supabase:", userError)
         return new NextResponse("Error creating user", { status: 500 })
       }
+    } else {
+      // Si l'utilisateur existe déjà, utiliser son ID existant
+      invitationId = existingUser.id
     }
 
     // Vérifier si le membre est déjà associé au client
@@ -122,7 +128,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      invitation: clerkData
+      invitation: existingUser ? null : { id: invitationId }
     })
   } catch (error) {
     console.error("Error:", error)

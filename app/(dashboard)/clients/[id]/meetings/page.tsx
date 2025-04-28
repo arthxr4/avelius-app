@@ -332,7 +332,7 @@ export function AppointmentTable({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 ">
       {(isLoading || table.getRowModel().rows?.length > 0) && (
         <>
           <div className="rounded-md border overflow-hidden">
@@ -601,7 +601,7 @@ export default function MeetingsPage() {
   )
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 p-2 sm:py-4 lg:px-6 pb-20 md:pb-4">
       <div className="flex items-center justify-between">
         <div className="">
           <h1 className="text-xl font-bold">Rendez-vous</h1>

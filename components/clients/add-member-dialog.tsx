@@ -45,16 +45,23 @@ export function AddMemberDialog({ clientId, trigger, onSuccess }: AddMemberDialo
 
       if (!response.ok) {
         const error = await response.text()
-        throw new Error(error)
+        if (response.status === 404) {
+          toast.error("Utilisateur non trouvé")
+        } else if (response.status === 400) {
+          toast.error("L'utilisateur est déjà membre de ce client")
+        } else {
+          toast.error("Erreur lors de l'ajout du membre")
+        }
+        return
       }
 
-      toast.success("Invitation envoyée avec succès")
+      toast.success("Membre ajouté avec succès")
       setOpen(false)
       setEmail("")
       onSuccess?.()
     } catch (error) {
       console.error("Error adding member:", error)
-      toast.error("Erreur lors de l'envoi de l'invitation")
+      toast.error("Erreur lors de l'ajout du membre")
     } finally {
       setIsSubmitting(false)
     }
@@ -69,7 +76,7 @@ export function AddMemberDialog({ clientId, trigger, onSuccess }: AddMemberDialo
         <DialogHeader>
           <DialogTitle>Ajouter un membre</DialogTitle>
           <DialogDescription>
-            Invitez un nouveau membre à rejoindre ce client. Un email d'invitation lui sera envoyé.
+            Ajoutez un membre existant à ce client.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -99,10 +106,10 @@ export function AddMemberDialog({ clientId, trigger, onSuccess }: AddMemberDialo
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Envoi en cours...
+                  Ajout en cours...
                 </>
               ) : (
-                "Envoyer l'invitation"
+                "Ajouter le membre"
               )}
             </Button>
           </DialogFooter>

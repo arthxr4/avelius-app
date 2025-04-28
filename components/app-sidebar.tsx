@@ -21,6 +21,7 @@ import {
   ActivitySquare,
   Briefcase,
   Users2,
+  Gauge,
 } from "lucide-react"
 import { useUser } from "@clerk/nextjs"
 import { createBrowserClient } from '@supabase/ssr'
@@ -43,7 +44,7 @@ import { useIsAdmin } from "@/lib/hooks/use-is-admin"
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { current } = useTeam()
   const { user: clerkUser } = useUser()
-  const { isAdmin } = useIsAdmin()
+  const { isAdmin, isLoading } = useIsAdmin()
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -74,9 +75,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   
   const navProjects = [
     {
-      name: "Vue globale",
+      name: "Cockpit",
       url: "/admin/overview",
-      icon: ActivitySquare,
+      icon: Gauge,
     },
     {
       name: "Clients",
@@ -104,11 +105,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent className="flex-1 overflow-y-auto">
         <div className="flex flex-col gap-2">
           <NavMain items={clientLinks} />
-          {isAdmin && <NavProjects projects={navProjects} />}
+          {/* Affiche un loader si on ne sait pas encore si l'utilisateur est admin */}
+          {isLoading ? (
+            <div className="px-3 py-2 animate-pulse text-xs text-muted-foreground"></div>
+          ) : isAdmin ? (
+            <NavProjects projects={navProjects} />
+          ) : null}
         </div>
       </SidebarContent>
       <SidebarFooter className="flex-shrink-0">
-        <NavUser user={user} />
+        <NavUser />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

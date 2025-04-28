@@ -20,23 +20,39 @@ export async function POST(req: Request) {
     }
 
     const supabase = await createServerSupabaseClient()
-
     let query = supabase
       .from("contacts")
       .select("*")
       .eq("client_id", client_id)
 
     if (search) {
-      query = query.or(
-        `first_name.ilike.%${search}%,` +
-        `last_name.ilike.%${search}%,` +
-        `email.ilike.%${search}%,` +
-        `phone.ilike.%${search}%,` +
-        `company.ilike.%${search}%`
-      )
+      // Nettoyer et diviser les termes de recherche
+      const searchTerms = search.trim().toLowerCase().split(/\s+/)
+
+      if (searchTerms.length > 1) {
+        // Si plusieurs termes, chercher les combinaisons nom/prénom dans les deux sens
+        query = query.or(
+          `and(first_name.ilike.%${searchTerms[0]}%,last_name.ilike.%${searchTerms[1]}%),` +
+          `and(first_name.ilike.%${searchTerms[1]}%,last_name.ilike.%${searchTerms[0]}%),` +
+          // Recherche exacte sur le nom complet
+          `or(first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%)`
+        )
+      } else {
+        // Si un seul terme, recherche simple sur tous les champs
+        query = query.or(
+          `first_name.ilike.%${search}%,` +
+          `last_name.ilike.%${search}%,` +
+          `email.ilike.%${search}%,` +
+          `phone.ilike.%${search}%,` +
+          `company.ilike.%${search}%`
+        )
+      }
     }
 
-    const { data, error } = await query.limit(10)
+    const { data, error } = await query
+      .order('last_name', { ascending: true })
+      .order('first_name', { ascending: true })
+      .limit(10)
 
     if (error) {
       console.error("❌ Erreur Supabase:", error.message)

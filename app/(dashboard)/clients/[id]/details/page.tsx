@@ -52,7 +52,7 @@ export default async function ClientDetailsPage({
   }
 
   return (
-    <div className="container mx-auto space-y-4">
+    <div className="container mx-auto space-y-4 p-2 sm:py-4 lg:px-6 pb-20 md:pb-4">
       <div className="">
           <h1 className="text-xl font-bold">Informations générales</h1>
           <p className="text-sm text-muted-foreground">

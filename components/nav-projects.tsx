@@ -44,13 +44,13 @@ export function NavProjects({
               <Link
                 href={item.url}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                  "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium tracking-tight transition-colors",
                   pathname === item.url
-                    ? "bg-secondary"
-                    : ""
+                    ? "bg-blue-50 text-blue-600"
+                    : "hover:bg-muted"
                 )}
               >
-                <item.icon className="h-4 w-4" />
+                <item.icon className="h-3.5 w-3.5 ![&>svg]:h-3.5 ![&>svg]:w-3.5" />
                 <span>{item.name}</span>
               </Link>
             </SidebarMenuButton>

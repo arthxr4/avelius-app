@@ -1,11 +1,10 @@
 "use client"
 
 import { ChevronsUpDown, CreditCard, LogOut, Settings, User } from "lucide-react"
-import { useUser, useClerk } from "@clerk/nextjs"
+import { useClerk, useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import { createClient } from "@supabase/supabase-js"
 import { cn } from "@/lib/utils"
+import { useUserData } from "@/lib/hooks/use-user-data"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -19,101 +18,77 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
-
 export function NavUser({
-  user,
   avatarOnly = false,
 }: {
-  user: {
-    name: string
-    email: string
-    avatar: string
-  }
   avatarOnly?: boolean
 }) {
   const { isMobile } = useSidebar()
-  const { user: clerkUser } = useUser()
   const { signOut } = useClerk()
+  const { user: clerkUser, isLoaded: isClerkLoaded } = useUser()
   const router = useRouter()
-  const [userData, setUserData] = useState<{
-    first_name: string
-    last_name: string
-    avatar_url: string | null
-  } | null>(null)
+  const { user, isLoading } = useUserData()
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      if (!clerkUser?.emailAddresses[0]?.emailAddress) return
-
-      try {
-        const { data, error } = await supabase
-          .from('users')
-          .select('first_name, last_name, avatar_url')
-          .eq('email', clerkUser.emailAddresses[0].emailAddress)
-          .single()
-
-        if (error) {
-          console.error('Error fetching user data:', error)
-          return
-        }
-
-        if (data) {
-          // Générer une URL signée si nous avons un avatar_url
-          let fullAvatarUrl = data.avatar_url
-          if (data.avatar_url) {
-            // Extraire le chemin relatif de l'URL complète si nécessaire
-            const path = data.avatar_url.includes('avatars/') 
-              ? data.avatar_url.split('avatars/')[1]
-              : data.avatar_url
-
-            const { data: signedData } = await supabase.storage
-              .from('avatars')
-              .createSignedUrl(path, 60 * 60 * 24) // URL valide 24h
-
-            if (signedData) {
-              fullAvatarUrl = signedData.signedUrl
-            }
-          }
-
-          setUserData({
-            ...data,
-            avatar_url: fullAvatarUrl
-          })
-        }
-      } catch (error) {
-        console.error('Error:', error)
-      }
-    }
-
-    fetchUserData()
-  }, [clerkUser?.emailAddresses])
-
-  useEffect(() => {
-    if (userData) {
-      console.log('User data loaded:', {
-        name: `${userData.first_name} ${userData.last_name}`,
-        avatar: userData.avatar_url
-      })
-    }
-  }, [userData])
-
-  // Use Supabase user data if available, otherwise fall back to Clerk, then to props
-  const displayName = userData 
-    ? `${userData.first_name} ${userData.last_name}` 
-    : clerkUser?.firstName 
-      ? `${clerkUser.firstName} ${clerkUser.lastName || ""}` 
-      : user.name
-  const email = clerkUser?.emailAddresses[0]?.emailAddress || user.email
-  const avatarUrl = userData?.avatar_url || clerkUser?.imageUrl || user.avatar
+  console.log("🔍 NavUser Debug:", {
+    isClerkLoaded,
+    clerkUser: clerkUser ? {
+      id: clerkUser.id,
+      email: clerkUser.emailAddresses[0]?.emailAddress,
+      firstName: clerkUser.firstName,
+      lastName: clerkUser.lastName
+    } : null,
+    user,
+    isLoading
+  })
 
   const handleSignOut = async () => {
     await signOut()
     router.push("/sign-in")
   }
+
+  // Si Clerk n'est pas chargé, on affiche un loader
+  if (!isClerkLoaded) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton size={avatarOnly ? "sm" : "lg"}>
+            <Avatar className="h-8 w-8 rounded-lg">
+              <AvatarFallback className="rounded-lg">...</AvatarFallback>
+            </Avatar>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    )
+  }
+
+  // Si pas d'utilisateur Clerk, on n'affiche rien
+  if (!clerkUser) {
+    return null
+  }
+
+  // Si on charge les données de l'utilisateur, on affiche un loader
+  if (isLoading) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton size={avatarOnly ? "sm" : "lg"}>
+            <Avatar className="h-8 w-8 rounded-lg">
+              <AvatarFallback className="rounded-lg">...</AvatarFallback>
+            </Avatar>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    )
+  }
+
+  // Si pas de données utilisateur, on utilise les données de Clerk
+  const displayName = user 
+    ? `${user.first_name} ${user.last_name}`
+    : `${clerkUser.firstName} ${clerkUser.lastName || ""}`
+  const email = user?.email || clerkUser.emailAddresses[0]?.emailAddress || ""
+  const avatarUrl = user?.avatar_url || clerkUser.imageUrl
+
+  console.log("🎨 NavUser Rendering:", { displayName, email, avatarUrl })
 
   return (
     <SidebarMenu>
@@ -128,7 +103,7 @@ export function NavUser({
               )}
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={avatarUrl} alt={displayName} />
+                <AvatarImage src={avatarUrl || undefined} alt={displayName} />
                 <AvatarFallback className="rounded-lg">{displayName.substring(0, 2).toUpperCase()}</AvatarFallback>
               </Avatar>
               {!avatarOnly && (
@@ -151,7 +126,7 @@ export function NavUser({
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={avatarUrl} alt={displayName} />
+                  <AvatarImage src={avatarUrl || undefined} alt={displayName} />
                   <AvatarFallback className="rounded-lg">{displayName.substring(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">

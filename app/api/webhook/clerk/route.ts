@@ -122,7 +122,6 @@ export async function POST(req: Request) {
             .update({ 
               id: id,
               status: "active" as UserStatus,
-              invited: false,
               accepted_at: new Date().toISOString()
             })
             .eq("email", email)
@@ -151,7 +150,6 @@ export async function POST(req: Request) {
         .update({ 
           id: id,
           status: "active" as UserStatus,
-          invited: false,
           accepted_at: new Date().toISOString()
         })
         .eq("email", email)
