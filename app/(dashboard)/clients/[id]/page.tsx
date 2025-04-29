@@ -4,7 +4,7 @@
 
 import { useParams } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Users, Calendar, UserX, TrendingUp, TrendingDown, Eye } from "lucide-react"
+import { Users, Calendar, UserX, TrendingUp, TrendingDown, Eye, FileText } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { AppointmentTable } from "@/components/appointment-table"
 import { toast } from "sonner"
@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Appointment, Contact } from "@/types/appointment"
+import { DateRangePicker } from "@/components/date-range-picker"
+import type { DateRange } from "react-day-picker"
 
 interface Analytics {
   totalAppointments: number
@@ -41,6 +43,9 @@ interface DashboardData {
   contacts: Contact[]
   analytics: Analytics
   timeRanges: Record<TimeRange, { start: Date; end: Date }>
+  client?: {
+    company: string
+  }
 }
 
 function getDateRangeFromType(type: TimeRange): { start: Date; end: Date } {
@@ -338,56 +343,50 @@ function ActiveAppointmentsList({ appointments, isLoading }: {
   const activeAppointments = appointments
     .filter(app => ["confirmed", "rescheduled"].includes(app.status))
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 5)
-
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
-  }
+    .slice(0, 3)
 
   return (
-    <Card className="h-full">
-      <CardHeader>
-        <CardTitle>Vos prochains rendez-vous</CardTitle>
-        <CardDescription>
-          Validez vos rendez-vous passés
-        </CardDescription>
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Vos prochains rendez-vous</CardTitle>
+        <CardDescription>Les 3 prochains rendez-vous à venir</CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="space-y-4">
+          <div className="space-y-2">
             {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-14 w-full" />
+              <Skeleton key={i} className="h-12 w-full" />
             ))}
           </div>
         ) : activeAppointments.length === 0 ? (
-          <div className="flex h-[300px] items-center justify-center text-muted-foreground">
+          <div className="flex h-[100px] items-center justify-center text-muted-foreground">
             Aucun rendez-vous actif
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-2">
             {activeAppointments.map((appointment) => (
               <div
                 key={appointment.id}
-                className="flex items-center justify-between"
+                className="flex items-center justify-between rounded-lg border p-2"
               >
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-9 w-9">
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      {getInitials(appointment.contacts.first_name, appointment.contacts.last_name)}
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                      {`${appointment.contacts.first_name.charAt(0)}${appointment.contacts.last_name.charAt(0)}`}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="text-base font-medium">
+                    <p className="font-medium text-sm">
                       {appointment.contacts.first_name} {appointment.contacts.last_name}
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      {format(new Date(appointment.date), "dd MMMM yyyy à HH:mm", { locale: fr })}
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(appointment.date), "dd MMM yyyy à HH:mm", { locale: fr })}
                     </p>
                   </div>
                 </div>
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
                       <Eye className="h-4 w-4" />
                     </Button>
                   </DialogTrigger>
@@ -411,6 +410,16 @@ export default function ClientDashboard() {
   const [selectedView, setSelectedView] = useState<"upcoming" | "past">("upcoming")
   const [chartData, setChartData] = useState<{ week: string; appointments: number }[]>([])
   const [timeRange, setTimeRange] = useState<TimeRange>("1m")
+  const [dateRange, setDateRange] = useState<DateRange>({
+    from: new Date(new Date().setMonth(new Date().getMonth() - 1)),
+    to: new Date()
+  })
+
+  const handleDateRangeChange = (range: DateRange | undefined) => {
+    if (range) {
+      setDateRange(range)
+    }
+  }
 
   useEffect(() => {
     if (data?.appointments.length) {
@@ -506,134 +515,183 @@ export default function ClientDashboard() {
       : dateB - dateA
   }) || []
 
+  const quickLinks = [
+    {
+      title: "Rendez-vous",
+      description: "Gérer vos rendez-vous et prospects",
+      icon: Calendar,
+      href: `/clients/${clientId}/meetings`
+    },
+    {
+      title: "Details & Documents",
+      description: "Accéder aux informations et documents",
+      icon: FileText,
+      href: `/clients/${clientId}/details`
+    }
+  ]
+
   return (
-    <div className="space-y-8 p-2 sm:py-4 lg:px-6 pb-20 md:pb-4">
-      <div className="*:data-[slot=card]:shadow-xs grid grid-cols-1 md:grid-cols-3 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card">
-        <AnalyticsCard
-          title="Total Rendez-vous"
-          value={data?.analytics.totalAppointments || 0}
-          trend="up"
-          trendValue="+12.5%"
-          description="Tendance à la hausse"
-          icon={Calendar}
-          isLoading={isLoading}
-        />
-        <AnalyticsCard
-          title="Total Prospects"
-          value={data?.analytics.totalProspects || 0}
-          trend="down"
-          trendValue="-20%"
-          description="Acquisition en baisse"
-          icon={Users}
-          isLoading={isLoading}
-        />
-        <AnalyticsCard
-          title="Taux de No-Show"
-          value={`${data?.analytics.noShowRate.toFixed(1) || 0}%`}
-          trend="up"
-          trendValue="+12.5%"
-          description="Rétention forte"
-          icon={UserX}
-          isLoading={isLoading}
+    <div className="space-y-8 p-6">
+      {/* Welcome Text and Date Range */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Bienvenue Arthur !</h1>
+          <p className="text-muted-foreground mt-1">Voici l'activité générée pour {data?.client?.company || "l'entreprise"}</p>
+        </div>
+        <DateRangePicker
+          date={dateRange}
+          onDateChange={(date) => date && setDateRange(date)}
         />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Rendez-vous créés par semaine</CardTitle>
-              <CardDescription>
-                {chartData.length > 0
-                  ? `${chartData[0].week} - ${chartData[chartData.length - 1].week}`
-                  : "Chargement..."}
-              </CardDescription>
-            </div>
-            <Select
-              value={timeRange}
-              onValueChange={(value: TimeRange) => setTimeRange(value)}
-            >
-              <SelectTrigger className="w-[220px]">
-                <SelectValue placeholder="Sélectionner une période" />
-              </SelectTrigger>
-              <SelectContent className="w-[220px]">
-                <SelectItem value="1m">4 dernières semaines</SelectItem>
-                <SelectItem value="3m">3 derniers mois</SelectItem>
-                <SelectItem value="year">Année en cours</SelectItem>
-              </SelectContent>
-            </Select>
-          </CardHeader>
-          <CardContent className="pt-4">
-            {isLoading ? (
-              <div className="h-[250px] w-full">
-                <Skeleton className="h-full w-full" />
-              </div>
-            ) : (
-              <div className="h-[250px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
-                    <CartesianGrid 
-                      strokeDasharray="3 3" 
-                      horizontal={true}
-                      vertical={false}
-                      stroke="hsl(var(--border))"
-                    />
-                    <XAxis
-                      dataKey="week"
-                      tickLine={false}
-                      axisLine={false}
-                      tick={{ fill: "hsl(var(--muted-foreground))" }}
-                      tickMargin={10}
-                      fontSize={12}
-                    />
-                    <YAxis
-                      tickLine={false}
-                      axisLine={false}
-                      tick={{ fill: "hsl(var(--muted-foreground))" }}
-                      tickMargin={10}
-                      fontSize={12}
-                      domain={[0, (dataMax: number) => Math.max(dataMax, 5)]}
-                    />
-                    <Tooltip
-                      cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
-                      content={<CustomTooltip />}
-                      wrapperStyle={{ zIndex: 1000 }}
-                    />
-                    <Bar
-                      dataKey="appointments"
-                      fill="#2563eb"
-                      radius={[4, 4, 0, 0]}
-                      maxBarSize={50}
-                      cursor="pointer"
-                      activeBar={{
-                        fill: "#1d4ed8",
-                      }}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </CardContent>
-          <CardFooter className="flex-col items-start gap-2 text-sm">
-            <div className="flex gap-2 font-medium leading-none">
-              <TrendingUp className="h-4 w-4" />
-              Évolution des rendez-vous créés sur la période
-            </div>
-          </CardFooter>
-      </Card>
-        <ActiveAppointmentsList appointments={data?.appointments || []} isLoading={isLoading} />
-      </div>
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
+        {/* Main Column */}
+        <div className="space-y-6">
+          {/* KPIs */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <AnalyticsCard
+              title="Total Rendez-vous"
+              value={data?.analytics.totalAppointments || 0}
+              trend="up"
+              trendValue="+12.5%"
+              description="Tendance à la hausse"
+              icon={Calendar}
+              isLoading={isLoading}
+            />
+            <AnalyticsCard
+              title="Total Prospects"
+              value={data?.analytics.totalProspects || 0}
+              trend="down"
+              trendValue="-20%"
+              description="Acquisition en baisse"
+              icon={Users}
+              isLoading={isLoading}
+            />
+            <AnalyticsCard
+              title="Taux de No-Show"
+              value={`${data?.analytics.noShowRate.toFixed(1) || 0}%`}
+              trend="up"
+              trendValue="+12.5%"
+              description="Rétention forte"
+              icon={UserX}
+              isLoading={isLoading}
+            />
+          </div>
 
-      <div>
-        <h2 className="text-2xl font-bold mb-4">Rendez-vous</h2>
-        <AppointmentTable
-          data={filteredAppointments}
-          onDelete={handleDelete}
-          onUpdate={handleUpdate}
-          selectedView={selectedView}
-          onViewChange={(value: "upcoming" | "past") => setSelectedView(value)}
-          isLoading={isLoading}
-        />
+          {/* Chart */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Rendez-vous créés par semaine</CardTitle>
+                <CardDescription>
+                  {chartData.length > 0
+                    ? `${chartData[0].week} - ${chartData[chartData.length - 1].week}`
+                    : "Chargement..."}
+                </CardDescription>
+              </div>
+              <Select
+                value={timeRange}
+                onValueChange={(value: TimeRange) => setTimeRange(value)}
+              >
+                <SelectTrigger className="w-[220px]">
+                  <SelectValue placeholder="Sélectionner une période" />
+                </SelectTrigger>
+                <SelectContent className="w-[220px]">
+                  <SelectItem value="1m">4 dernières semaines</SelectItem>
+                  <SelectItem value="3m">3 derniers mois</SelectItem>
+                  <SelectItem value="year">Année en cours</SelectItem>
+                </SelectContent>
+              </Select>
+            </CardHeader>
+            <CardContent className="pt-4">
+              {isLoading ? (
+                <div className="h-[250px] w-full">
+                  <Skeleton className="h-full w-full" />
+                </div>
+              ) : (
+                <div className="h-[250px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData} margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
+                      <CartesianGrid 
+                        strokeDasharray="3 3" 
+                        horizontal={true}
+                        vertical={false}
+                        stroke="hsl(var(--border))"
+                      />
+                      <XAxis
+                        dataKey="week"
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fill: "hsl(var(--muted-foreground))" }}
+                        tickMargin={10}
+                        fontSize={12}
+                      />
+                      <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fill: "hsl(var(--muted-foreground))" }}
+                        tickMargin={10}
+                        fontSize={12}
+                        domain={[0, (dataMax: number) => Math.max(dataMax, 5)]}
+                      />
+                      <Tooltip
+                        cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
+                        content={<CustomTooltip />}
+                        wrapperStyle={{ zIndex: 1000 }}
+                      />
+                      <Bar
+                        dataKey="appointments"
+                        fill="#2563eb"
+                        radius={[4, 4, 0, 0]}
+                        maxBarSize={50}
+                        cursor="pointer"
+                        activeBar={{
+                          fill: "#1d4ed8",
+                        }}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Active Appointments - Version plus compacte */}
+          <ActiveAppointmentsList appointments={data?.appointments || []} isLoading={isLoading} />
+        </div>
+
+        {/* Secondary Column */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Accès rapide</CardTitle>
+              <CardDescription>Navigation rapide vers vos pages principales</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {quickLinks.map((link, i) => {
+                  const Icon = link.icon
+                  return (
+                    <a
+                      key={i}
+                      href={link.href}
+                      className="flex items-start space-x-4 rounded-lg border p-4 transition-colors hover:bg-muted"
+                    >
+                      <div className="rounded-lg border p-2">
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium">{link.title}</h3>
+                        <p className="text-sm text-muted-foreground">{link.description}</p>
+                      </div>
+                    </a>
+                  )
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )

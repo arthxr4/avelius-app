@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { BreadcrumbNav } from "@/components/breadcrumb-nav"
 import { NavUser } from "@/components/nav-user"
-import { useUser } from "@clerk/nextjs"
+import { OrganizationSwitcher, useUser } from "@clerk/nextjs"
 import { Settings, LayoutDashboard, CalendarDays, ListChecks, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -109,6 +109,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             >
               <Settings className="h-4 w-4" />
             </Button>
+            <OrganizationSwitcher />
             <NavUser 
               avatarOnly
               user={{

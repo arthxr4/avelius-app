@@ -52,9 +52,9 @@ import {
 } from "@/components/ui/select"
 
 interface RouteParams {
-    id: string
+  id: string
   list_id: string
-  }
+}
 
 interface Props {
   params: Promise<RouteParams>

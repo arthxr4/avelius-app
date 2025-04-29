@@ -1,14 +1,17 @@
-import { auth } from "@clerk/nextjs/server"
-import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { createClient } from "@supabase/supabase-js"
 
 export async function GET() {
-  const session = await auth()
-  if (!session?.userId) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
-
-  const supabase = await createServerSupabaseClient()
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  )
 
   const { data: users, error } = await supabase
     .from("users")
@@ -24,7 +27,7 @@ export async function GET() {
     users.map(async (user) => {
       const isSupabaseAvatar =
         user.avatar_url?.includes("avatars/") &&
-        !user.avatar_url?.includes("storage.googleapis.com") // si pas déjà signé
+        !user.avatar_url?.includes("storage.googleapis.com")
 
       if (isSupabaseAvatar) {
         const path = user.avatar_url.split("avatars/")[1]
@@ -39,7 +42,7 @@ export async function GET() {
         }
       }
 
-      return user // rien à changer
+      return user
     })
   )
 

@@ -180,24 +180,24 @@ export default function ProspectingListsPage() {
   })
 
   React.useEffect(() => {
-    const fetchLists = async () => {
-      try {
-        setLoading(true)
-        if (!current?.id) return
-        const res = await fetch(`/api/get-prospecting-lists?client_id=${current.id}`, {
-          credentials: "include",
-        })
-        if (!res.ok) throw new Error("Erreur lors de la récupération des listes")
-        const data = await res.json()
-        setLists(data)
-      } catch (error) {
-        console.error("❌ Erreur:", error)
+  const fetchLists = async () => {
+    try {
+      setLoading(true)
+      if (!current?.id) return
+      const res = await fetch(`/api/get-prospecting-lists?client_id=${current.id}`, {
+        credentials: "include",
+      })
+      if (!res.ok) throw new Error("Erreur lors de la récupération des listes")
+      const data = await res.json()
+      setLists(data)
+    } catch (error) {
+      console.error("❌ Erreur:", error)
         toast.error("Erreur lors du chargement des données")
-      } finally {
-        setLoading(false)
-      }
+    } finally {
+      setLoading(false)
     }
-    fetchLists()
+  }
+      fetchLists()
   }, [current?.id])
 
   if (!current) return null
@@ -208,10 +208,10 @@ export default function ProspectingListsPage() {
         <div className="flex items-center justify-between py-4 px-4">
           <div>
             <h1 className="text-md font-semibold">Listes de prospection</h1>
-            <p className="text-sm text-muted-foreground">
-              Gérez vos listes de prospects et suivez leur progression
-            </p>
-          </div>
+          <p className="text-sm text-muted-foreground">
+            Gérez vos listes de prospects et suivez leur progression
+          </p>
+        </div>
           <CreateProspectingListDialog clientId={current.id} onCreated={() => {
             const fetchLists = async () => {
               try {
@@ -231,18 +231,18 @@ export default function ProspectingListsPage() {
             }
             fetchLists()
           }} />
-        </div>
+      </div>
         <div className="px-4 pb-4">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher une liste..."
-              className="pl-9"
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Rechercher une liste..."
+            className="pl-9"
               value={(table.getColumn("title")?.getFilterValue() as string) ?? ""}
               onChange={(event) =>
                 table.getColumn("title")?.setFilterValue(event.target.value)
               }
-            />
+          />
           </div>
         </div>
       </div>
