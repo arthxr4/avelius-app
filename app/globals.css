@@ -95,3 +95,10 @@
     min-height: 100%;
   }
 }
+
+
+/* Ajustement global du strokeWidth pour les icônes Lucide */
+.lucide,
+.lucide * {
+  stroke-width: 2.25px !important;
+}

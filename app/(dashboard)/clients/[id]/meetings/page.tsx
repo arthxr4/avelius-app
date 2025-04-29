@@ -337,7 +337,7 @@ export function AppointmentTable({
         <>
           <div className="rounded-md border overflow-hidden">
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-muted">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header) => {
@@ -625,9 +625,15 @@ export default function MeetingsPage() {
 
       <Tabs defaultValue="upcoming" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="upcoming">À venir</TabsTrigger>
-          <TabsTrigger value="past">Passés</TabsTrigger>
-          <TabsTrigger value="canceled">Annulés</TabsTrigger>
+          <TabsTrigger value="upcoming" className="flex items-center gap-2">
+            À venir <span className="rounded bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 px-1.5 py-0.5 text-xs">{upcomingAppointments.length}</span>
+          </TabsTrigger>
+          <TabsTrigger value="past" className="flex items-center gap-2">
+            Passés <span className="rounded bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 px-1.5 py-0.5 text-xs">{pastAppointments.length}</span>
+          </TabsTrigger>
+          <TabsTrigger value="canceled" className="flex items-center gap-2">
+            Annulés <span className="rounded bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 px-1.5 py-0.5 text-xs">{canceledAppointments.length}</span>
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="upcoming">
           <AppointmentTable

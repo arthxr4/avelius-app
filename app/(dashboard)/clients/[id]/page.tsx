@@ -11,7 +11,19 @@ import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts"
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { startOfWeek, endOfWeek, subWeeks, startOfYear, endOfYear, format, addWeeks, isWithinInterval, subMonths } from "date-fns"
+import { 
+  startOfWeek, 
+  endOfWeek, 
+  subWeeks, 
+  startOfYear, 
+  endOfYear, 
+  format, 
+  addWeeks, 
+  isWithinInterval, 
+  subMonths,
+  addDays,
+  differenceInDays
+} from "date-fns"
 import { fr } from "date-fns/locale"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
@@ -142,67 +154,72 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     <div className="rounded-lg border bg-background p-2 shadow-sm">
       <div className="text-sm font-medium">{label}</div>
       <div className="flex items-center gap-2 text-sm">
-        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: "#2563eb" }} />
+        <div className="h-2 w-2 rounded-sm" style={{ backgroundColor: "#2563eb" }} />
         <span className="font-medium">{payload[0]?.value} rendez-vous</span>
       </div>
     </div>
   )
 }
 
-function groupAppointmentsByWeek(appointments: Appointment[], timeRange: TimeRange, timeRanges: DashboardData['timeRanges']) {
-  if (!appointments.length) return []
+// Fonction utilitaire pour calculer la différence de dates de manière sûre
+function getDateDifference(dateRange: DateRange | undefined): number {
+  if (!dateRange?.from || !dateRange?.to) return Infinity
+  return differenceInDays(dateRange.to, dateRange.from)
+}
 
-  const now = new Date()
-  const currentWeekEnd = endOfWeek(now, { locale: fr })
+function groupAppointmentsByPeriod(appointments: Appointment[], dateRange: DateRange) {
+  if (!appointments.length || !dateRange?.from || !dateRange?.to) return []
   
-  // Calculer les plages de dates en fonction de la période sélectionnée
-  let start: Date
-  let end: Date = currentWeekEnd
+  const daysDifference = getDateDifference(dateRange)
+  const shouldGroupByDay = daysDifference <= 30
 
-  switch (timeRange) {
-    case "1m":
-      // 4 dernières semaines en incluant la semaine en cours
-      start = startOfWeek(subWeeks(currentWeekEnd, 3), { locale: fr })
-      break
-    case "3m":
-      // 3 derniers mois en incluant le mois en cours
-      start = startOfWeek(subMonths(now, 2), { locale: fr })
-      break
-    case "year":
-      // Année en cours
-      start = startOfYear(now)
-      end = endOfYear(now)
-      break
-  }
-  
-  // Filtrer les rendez-vous dans la plage de dates
-  const filteredAppointments = appointments.filter(app => {
-    const creationDate = new Date(app.created_at)
-    return isWithinInterval(creationDate, { start, end })
-  })
-
-  if (!filteredAppointments.length) return []
-
-  // Nombre de semaines à afficher selon la plage
-  const weeksToShow = timeRange === "1m" ? 4 : timeRange === "3m" ? 12 : 52
-  
-  // Créer un tableau de semaines
-  const weeks = Array.from({ length: weeksToShow }, (_, i) => {
-    const weekStart = addWeeks(startOfWeek(start, { locale: fr }), i)
-    const weekEnd = addWeeks(weekStart, 1)
+  if (shouldGroupByDay) {
+    // Groupement par jour
+    const days = []
+    let currentDate = dateRange.from
     
-    const appointmentsInWeek = filteredAppointments.filter(app => {
-      const creationDate = new Date(app.created_at)
-      return isWithinInterval(creationDate, { start: weekStart, end: weekEnd })
-    })
+    while (currentDate <= dateRange.to) {
+      const appointmentsInDay = appointments.filter(app => {
+        const creationDate = new Date(app.created_at)
+        return format(creationDate, "yyyy-MM-dd") === format(currentDate, "yyyy-MM-dd")
+      })
 
-    return {
-      week: format(weekStart, "dd MMM", { locale: fr }),
-      appointments: appointmentsInWeek.length,
+      days.push({
+        period: format(currentDate, "dd MMM", { locale: fr }),
+        appointments: appointmentsInDay.length,
+      })
+
+      currentDate = addDays(currentDate, 1)
     }
-  })
 
-  return weeks
+    return days
+  } else {
+    // Groupement par semaine
+    const weeks = []
+    let currentDate = startOfWeek(dateRange.from, { locale: fr })
+    const endDate = endOfWeek(dateRange.to, { locale: fr })
+
+    while (currentDate <= endDate) {
+      const weekEnd = endOfWeek(currentDate, { locale: fr })
+      
+      const appointmentsInWeek = appointments.filter(app => {
+        const creationDate = new Date(app.created_at)
+        return isWithinInterval(creationDate, { 
+          start: currentDate, 
+          end: weekEnd 
+        })
+      })
+
+      weeks.push({
+        period: format(currentDate, "dd MMM", { locale: fr }),
+        appointments: appointmentsInWeek.length,
+      })
+
+      currentDate = addWeeks(currentDate, 1)
+    }
+
+    return weeks
+  }
 }
 
 function getMaxYAxis(data: { appointments: number }[]) {
@@ -401,32 +418,36 @@ function ActiveAppointmentsList({ appointments, isLoading }: {
   )
 }
 
-export default function ClientDashboard() {
+export default function ClientOverview() {
   const params = useParams()
   const clientId = params.id as string
   const [data, setData] = useState<DashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedView, setSelectedView] = useState<"upcoming" | "past">("upcoming")
-  const [chartData, setChartData] = useState<{ week: string; appointments: number }[]>([])
-  const [timeRange, setTimeRange] = useState<TimeRange>("1m")
-  const [dateRange, setDateRange] = useState<DateRange>({
+  const [chartData, setChartData] = useState<{ period: string; appointments: number }[]>([])
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: new Date(new Date().setMonth(new Date().getMonth() - 1)),
     to: new Date()
   })
 
   const handleDateRangeChange = (range: DateRange | undefined) => {
-    if (range) {
-      setDateRange(range)
-    }
+    setDateRange(range)
   }
 
   useEffect(() => {
-    if (data?.appointments.length) {
-      const newChartData = groupAppointmentsByWeek(data.appointments, timeRange, data.timeRanges)
+    if (data?.appointments.length && dateRange?.from && dateRange?.to) {
+      const filteredAppointments = data.appointments.filter(app => {
+        const creationDate = new Date(app.created_at)
+        return dateRange.from && dateRange.to && 
+          creationDate >= dateRange.from && 
+          creationDate <= dateRange.to
+      })
+      
+      const newChartData = groupAppointmentsByPeriod(filteredAppointments, dateRange)
       setChartData(newChartData)
     }
-  }, [data?.appointments, timeRange, data?.timeRanges])
+  }, [data?.appointments, dateRange])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -540,7 +561,7 @@ export default function ClientDashboard() {
         </div>
         <DateRangePicker
           date={dateRange}
-          onDateChange={(date) => date && setDateRange(date)}
+          onDateChange={handleDateRangeChange}
         />
       </div>
 
@@ -581,28 +602,17 @@ export default function ClientDashboard() {
 
           {/* Chart */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader>
               <div>
-                <CardTitle>Rendez-vous créés par semaine</CardTitle>
+                <CardTitle>
+                  Rendez-vous créés {getDateDifference(dateRange) <= 30 ? "par jour" : "par semaine"}
+                </CardTitle>
                 <CardDescription>
                   {chartData.length > 0
-                    ? `${chartData[0].week} - ${chartData[chartData.length - 1].week}`
+                    ? `${chartData[0].period} - ${chartData[chartData.length - 1].period}`
                     : "Chargement..."}
                 </CardDescription>
               </div>
-              <Select
-                value={timeRange}
-                onValueChange={(value: TimeRange) => setTimeRange(value)}
-              >
-                <SelectTrigger className="w-[220px]">
-                  <SelectValue placeholder="Sélectionner une période" />
-                </SelectTrigger>
-                <SelectContent className="w-[220px]">
-                  <SelectItem value="1m">4 dernières semaines</SelectItem>
-                  <SelectItem value="3m">3 derniers mois</SelectItem>
-                  <SelectItem value="year">Année en cours</SelectItem>
-                </SelectContent>
-              </Select>
             </CardHeader>
             <CardContent className="pt-4">
               {isLoading ? (
@@ -620,7 +630,7 @@ export default function ClientDashboard() {
                         stroke="hsl(var(--border))"
                       />
                       <XAxis
-                        dataKey="week"
+                        dataKey="period"
                         tickLine={false}
                         axisLine={false}
                         tick={{ fill: "hsl(var(--muted-foreground))" }}
@@ -628,6 +638,7 @@ export default function ClientDashboard() {
                         fontSize={12}
                       />
                       <YAxis
+                        width={20}
                         tickLine={false}
                         axisLine={false}
                         tick={{ fill: "hsl(var(--muted-foreground))" }}

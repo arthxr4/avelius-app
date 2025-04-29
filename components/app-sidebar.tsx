@@ -22,6 +22,7 @@ import {
   Briefcase,
   Users2,
   Gauge,
+  House,
 } from "lucide-react"
 import { useUser } from "@clerk/nextjs"
 import { createBrowserClient } from '@supabase/ssr'
@@ -54,7 +55,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     {
       title: "Vue d'ensemble",
       url: current?.id ? `/clients/${current.id}` : "#",
-      icon: LayoutDashboard,
+      icon: House,
     },
     {
       title: "Rendez-vous",

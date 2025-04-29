@@ -25,7 +25,7 @@ export function NavMain({
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+      
       <SidebarMenu>
         {items.map((item, index) => (
           <SidebarMenuItem key={item.title}>
@@ -35,7 +35,7 @@ export function NavMain({
                 className={cn(
                   "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium tracking-tight transition-colors",
                   pathname === item.url
-                    ? "bg-blue-50 text-blue-600"
+                    ? "bg-muted font-semibold"
                     : "hover:bg-muted"
                 )}
               >
