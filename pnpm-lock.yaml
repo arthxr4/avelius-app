@@ -23,6 +23,9 @@ importers:
       '@hookform/resolvers':
         specifier: ^3.10.0
         version: 3.10.0(react-hook-form@7.55.0(react@18.3.1))
+      '@phosphor-icons/react':
+        specifier: ^2.1.7
+        version: 2.1.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@radix-ui/react-accordion':
         specifier: ^1.2.4
         version: 1.2.4(@types/react-dom@18.3.6(@types/react@18.3.20))(@types/react@18.3.20)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -116,6 +119,9 @@ importers:
       '@tanstack/react-table':
         specifier: ^8.21.2
         version: 8.21.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@untitledui/icons-react':
+        specifier: ^0.3.0
+        version: 0.3.0(react@18.3.1)
       chart.js:
         specifier: ^4.4.9
         version: 4.4.9
@@ -579,6 +585,13 @@ packages:
   '@peculiar/webcrypto@1.4.1':
     resolution: {integrity: sha512-eK4C6WTNYxoI7JOabMoZICiyqRRtJB220bh0Mbj5RwRycleZf9BPyZoxsTvpP0FpmVS2aS13NKOuh5/tN3sIRw==}
     engines: {node: '>=10.12.0'}
+
+  '@phosphor-icons/react@2.1.7':
+    resolution: {integrity: sha512-g2e2eVAn1XG2a+LI09QU3IORLhnFNAFkNbo2iwbX6NOKSLOwvEMmTa7CgOzEbgNWR47z8i8kwjdvYZ5fkGx1mQ==}
+    engines: {node: '>=10'}
+    peerDependencies:
+      react: '>= 16.8'
+      react-dom: '>= 16.8'
 
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
@@ -1495,6 +1508,12 @@ packages:
     resolution: {integrity: sha512-hVXaObGI2lGFmrtT77KSbPQ3I+zk9IU500wobjk0+oX59vg/0VqAzABNtt3YSQYgXTC2a/LYxekLfND/wlt0yQ==}
     cpu: [x64]
     os: [win32]
+
+  '@untitledui/icons-react@0.3.0':
+    resolution: {integrity: sha512-wEFYxiCBxpzGgFGcHaX7Rcg+iVf9XlRx/cCR0KbL+3JAx6nJUjd75BJ5XIpQP/minKSX/K1CNBbdrfuwQjbwGg==}
+    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
+    peerDependencies:
+      react: '>= 16'
 
   acorn-jsx@5.3.2:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
@@ -3716,6 +3735,11 @@ snapshots:
       tslib: 2.8.1
       webcrypto-core: 1.8.1
 
+  '@phosphor-icons/react@2.1.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+    dependencies:
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+
   '@pkgjs/parseargs@0.11.0':
     optional: true
 
@@ -4714,6 +4738,10 @@ snapshots:
 
   '@unrs/resolver-binding-win32-x64-msvc@1.4.1':
     optional: true
+
+  '@untitledui/icons-react@0.3.0(react@18.3.1)':
+    dependencies:
+      react: 18.3.1
 
   acorn-jsx@5.3.2(acorn@8.14.1):
     dependencies:
