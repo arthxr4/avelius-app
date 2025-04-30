@@ -290,9 +290,9 @@ export default function ClientsManagerPage() {
   return (
     <div className="flex h-screen flex-col">
       <div className="sticky top-0 z-20 bg-background">
-        <div className="flex items-center justify-between py-4 px-4">
+        <div className="flex items-center justify-between py-4 px-4 ">
           <div>
-            <h1 className="text-md font-semibold">Clients</h1>
+            <h1 className="text-xl font-bold">Clients</h1>
             <p className="text-sm text-muted-foreground">
               Ajouter, modifier ou supprimer un client.
             </p>

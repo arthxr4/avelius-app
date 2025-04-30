@@ -8,6 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Member } from "./columns"
+import { format, formatDistanceToNow } from 'date-fns'
+import { fr } from 'date-fns/locale'
+import { Table, TableHeader, TableRow, TableHead } from "@/components/ui/table"
+import { flexRender } from "@tanstack/react-table"
+import { Input } from "@/components/ui/input"
 
 function MembersTableSkeleton() {
   return (
@@ -45,6 +50,7 @@ export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [cache, setCache] = useState<Member[] | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
 
   // Afficher le skeleton immédiatement
   useEffect(() => {
@@ -95,38 +101,46 @@ export default function MembersPage() {
   })
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 p-2 sm:py-4 lg:px-6 pb-20 md:pb-4">
       <div className="flex items-center justify-between">
-      <div className="">
+        <div className="">
           <h1 className="text-xl font-bold">Équipe interne</h1>
           <p className="text-sm text-muted-foreground">
             Gestion des membres internes à Avelius
           </p>
         </div>
         
-        <AddMemberDialog onSuccess={fetchMembers} />
+        <div className="flex items-center gap-4">
+          <Input
+            placeholder="Rechercher par email..."
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            className="w-[300px]"
+          />
+          <AddMemberDialog onSuccess={fetchMembers} />
+        </div>
       </div>
-      <Tabs defaultValue="active" className="space-y-4">
+      <Tabs defaultValue="active" className="space-y-2">
         <TabsList>
-          <TabsTrigger value="active">
-            Utilisateurs
+          <TabsTrigger value="active" className="group flex items-center gap-2 text-muted-foreground data-[state=active]:text-blue-600 hover:text-foreground transition-colors pb-2">
+            Utilisateurs <span className="rounded bg-muted text-muted-foreground group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-600 px-1.5 py-0.5 text-xs transition-colors">{activeMembers.length}</span>
           </TabsTrigger>
-          <TabsTrigger value="pending">
-            En attente
+          <TabsTrigger value="pending" className="group flex items-center gap-2 text-muted-foreground data-[state=active]:text-blue-600 hover:text-foreground transition-colors pb-2">
+            En attente <span className="rounded bg-muted text-muted-foreground group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-600 px-1.5 py-0.5 text-xs transition-colors">{pendingMembers.length}</span>
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="active" className="space-y-4">
+        <TabsContent value="active" className="space-y-2">
           {isLoading ? (
             <MembersTableSkeleton />
           ) : (
-            <DataTable columns={columnsWithRefresh} data={activeMembers} />
+            <DataTable columns={columnsWithRefresh} data={activeMembers} searchQuery={searchQuery} />
           )}
         </TabsContent>
-        <TabsContent value="pending" className="space-y-4">
+        <TabsContent value="pending" className="space-y-2">
           {isLoading ? (
             <MembersTableSkeleton />
           ) : (
-            <DataTable columns={columnsWithRefresh} data={pendingMembers} />
+            <DataTable columns={columnsWithRefresh} data={pendingMembers} searchQuery={searchQuery} />
           )}
         </TabsContent>
       </Tabs>

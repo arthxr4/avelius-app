@@ -39,12 +39,14 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
   onRowsSelected?: (rows: Member[]) => void
+  searchQuery: string
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   onRowsSelected,
+  searchQuery,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -68,6 +70,11 @@ export function DataTable<TData, TValue>({
     enableRowSelection: true,
   })
 
+  // Set email filter when searchQuery changes
+  React.useEffect(() => {
+    table.getColumn("email")?.setFilterValue(searchQuery)
+  }, [searchQuery, table])
+
   // Update selected rows when selection changes
   useEffect(() => {
     if (onRowsSelected) {
@@ -80,52 +87,26 @@ export function DataTable<TData, TValue>({
 
   return (
     <div>
-      <div className="flex items-center justify-between py-4">
-        <Input
-          placeholder="Filtrer par email..."
-          value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("email")?.setFilterValue(event.target.value)
+      <div className="flex items-center justify-start py-2">
+        <Select
+          value={(table.getColumn("role")?.getFilterValue() as string) ?? "all"}
+          onValueChange={(value) =>
+            table.getColumn("role")?.setFilterValue(value === "all" ? null : value)
           }
-          className="max-w-sm"
-        />
-        <div className="flex items-center gap-2">
-          <Select
-            value={(table.getColumn("role")?.getFilterValue() as string) ?? "all"}
-            onValueChange={(value) =>
-              table.getColumn("role")?.setFilterValue(value === "all" ? null : value)
-            }
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Tous les rôles" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les rôles</SelectItem>
-              <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="agent">Agent</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select
-            value={(table.getColumn("status")?.getFilterValue() as string) ?? "all"}
-            onValueChange={(value) =>
-              table.getColumn("status")?.setFilterValue(value === "all" ? null : value)
-            }
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Tous les statuts" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les statuts</SelectItem>
-              <SelectItem value="active">Actif</SelectItem>
-              <SelectItem value="inactive">Inactif</SelectItem>
-              <SelectItem value="pending">En attente</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Tous les rôles" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tous les rôles</SelectItem>
+            <SelectItem value="admin">Admin</SelectItem>
+            <SelectItem value="agent">Agent</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <div className="rounded-md border">
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-muted">
             <TableRow>
               <TableHead className="w-[40px] p-0">
                 <Checkbox

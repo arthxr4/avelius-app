@@ -4,14 +4,15 @@ import { useState } from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { BadgePerso } from "@/components/ui/BadgePerso"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, UserCog, Trash2 } from "lucide-react"
-import { format } from "date-fns"
+import { MoreHorizontal, UserCog, Trash2, Circle, Clock, XCircle, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react"
+import { format, formatDistanceToNow } from "date-fns"
 import { fr } from "date-fns/locale"
 import { UpdateRoleDialog } from "@/components/members/update-role-dialog"
 import { toast } from "sonner"
@@ -37,12 +38,61 @@ export type Member = {
   updated_at: string
   avatar_url: string | null
   clerk_image_url?: string
+  last_seen_at: string | null
+}
+
+const userStatusConfig = {
+  "En ligne": {
+    icon: CheckCircle2,
+    iconClass: "text-green-500",
+    border: "border border-green-200",
+    bg: "bg-green-50",
+    text: "text-green-700",
+  },
+  "Absent": {
+    icon: Clock,
+    iconClass: "text-orange-500",
+    border: "border border-orange-200",
+    bg: "bg-orange-50",
+    text: "text-orange-700",
+  },
+  "Inactif": {
+    icon: Circle,
+    iconClass: "text-gray-400",
+    border: "border border-gray-200",
+    bg: "bg-gray-50",
+    text: "text-gray-600",
+  },
+  "Invitation en attente": {
+    icon: Clock,
+    iconClass: "text-blue-500",
+    border: "border border-blue-200",
+    bg: "bg-blue-50",
+    text: "text-blue-700",
+  }
 }
 
 export const columns: ColumnDef<Member>[] = [
   {
     accessorKey: "email",
-    header: "Email",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="text-foreground font-medium hover:text-foreground/80 px-0"
+        >
+          Email
+          {column.getIsSorted() === "asc" ? (
+            <ChevronUp className="ml-2 h-4 w-4" />
+          ) : column.getIsSorted() === "desc" ? (
+            <ChevronDown className="ml-2 h-4 w-4" />
+          ) : (
+            <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+          )}
+        </Button>
+      )
+    },
     cell: ({ row }) => {
       const first_name = row.original.first_name || ""
       const last_name = row.original.last_name || ""
@@ -62,11 +112,11 @@ export const columns: ColumnDef<Member>[] = [
           </Avatar>
           <div>
             {(first_name || last_name) && (
-              <div className="font-medium">
+              <div className="font-medium text-foreground">
                 {[first_name, last_name].filter(Boolean).join(" ")}
               </div>
             )}
-            <div className={!first_name && !last_name ? "font-medium" : "text-sm text-muted-foreground"}>
+            <div className={!first_name && !last_name ? "font-medium text-foreground" : "text-sm text-muted-foreground"}>
               {row.original.email}
             </div>
           </div>
@@ -76,7 +126,7 @@ export const columns: ColumnDef<Member>[] = [
   },
   {
     accessorKey: "role",
-    header: "Rôle",
+    header: () => <span className="text-foreground font-medium">Rôle</span>,
     cell: ({ row }) => {
       const role = row.getValue("role") as string
       const roleLabels: Record<string, string> = {
@@ -86,30 +136,63 @@ export const columns: ColumnDef<Member>[] = [
       }
 
       return (
-        <Badge variant="outline">
+        <span className="text-muted-foreground">
           {roleLabels[role] || role}
-        </Badge>
+        </span>
       )
     },
   },
   {
     accessorKey: "status",
-    header: "Statut",
+    header: () => <span className="text-foreground font-medium">Statut</span>,
     cell: ({ row }) => {
       const status = row.original.status
       const invited = row.original.invited
-      let label = "Actif"
+      const lastSeenAt = row.original.last_seen_at
       
       if (invited && !row.original.accepted_at) {
-        label = "Invitation en attente"
-      } else if (status === "inactive") {
-        label = "Inactif"
+        return (
+          <span className="text-muted-foreground">
+            Invitation en attente
+          </span>
+        )
+      }
+
+      if (lastSeenAt) {
+        const lastSeen = new Date(lastSeenAt)
+        const now = new Date()
+        const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000)
+        
+        if (lastSeen > fiveMinutesAgo) {
+          return (
+            <BadgePerso withDot>
+              <span className="text-muted-foreground">Actif</span>
+            </BadgePerso>
+          )
+        }
       }
 
       return (
-        <Badge variant="outline">
-          {label}
-        </Badge>
+        <BadgePerso withDot dotClassName="bg-gray-300">
+          <span className="text-muted-foreground">Inactif</span>
+        </BadgePerso>
+      )
+    },
+  },
+  {
+    accessorKey: "last_seen_at",
+    header: () => <span className="text-foreground font-medium">Dernière activité</span>,
+    cell: ({ row }) => {
+      const lastSeenAt = row.getValue("last_seen_at") as string | null
+      
+      if (!lastSeenAt) {
+        return <span className="text-muted-foreground">Jamais</span>
+      }
+
+      return (
+        <span className="text-muted-foreground">
+          {formatDistanceToNow(new Date(lastSeenAt), { addSuffix: true, locale: fr })}
+        </span>
       )
     },
   },
@@ -141,7 +224,7 @@ export const columns: ColumnDef<Member>[] = [
         <div className="text-right">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
+              <Button variant="ghost" className="h-8 w-8 p-0 text-muted-foreground">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -151,10 +234,10 @@ export const columns: ColumnDef<Member>[] = [
                 Modifier le rôle
               </DropdownMenuItem>
               <DropdownMenuItem 
-                className="text-destructive"
+                className="text-destructive hover:text-destructive focus:text-destructive"
                 onClick={handleDelete}
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="mr-2 h-4 w-4 text-destructive group-hover:text-destructive" />
                 Supprimer
               </DropdownMenuItem>
             </DropdownMenuContent>

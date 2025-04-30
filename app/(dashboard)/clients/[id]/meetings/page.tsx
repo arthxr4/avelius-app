@@ -43,12 +43,17 @@ import {
   ChevronRightIcon,
   ChevronsLeftIcon,
   ChevronsRightIcon,
-  ColumnsIcon,
   MoreVerticalIcon,
   Eye,
   Trash,
-  ArrowUpDown,
+  ChevronDown,
+  ChevronUp,
   Calendar,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  RefreshCcw,
+  UserX,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { format } from "date-fns"
@@ -63,7 +68,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle2, Clock, XCircle, RefreshCcw, UserX } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AddAppointmentDialog } from "@/components/add-appointment-dialog"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -206,9 +210,16 @@ export function AppointmentTable({
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="text-sm font-medium text-foreground hover:text-foreground/80 px-0"
           >
             Date
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            {column.getIsSorted() === "asc" ? (
+              <ChevronUp className="ml-2 h-4 w-4" />
+            ) : column.getIsSorted() === "desc" ? (
+              <ChevronDown className="ml-2 h-4 w-4" />
+            ) : (
+              <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+            )}
           </Button>
         )
       },
@@ -216,7 +227,7 @@ export function AppointmentTable({
         const date = new Date(row.getValue("date"))
         return (
           <div className="flex flex-col">
-            <div className="font-medium">
+            <div className="text-sm font-medium">
               {format(date, "d MMMM yyyy", { locale: fr })}
             </div>
             <div className="text-sm text-muted-foreground">
@@ -228,18 +239,48 @@ export function AppointmentTable({
     },
     {
       accessorKey: "contacts",
-      header: "Contact",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="text-sm font-medium text-foreground hover:text-foreground/80 px-0"
+        >
+          Contact
+          {column.getIsSorted() === "asc" ? (
+            <ChevronUp className="ml-2 h-4 w-4" />
+          ) : column.getIsSorted() === "desc" ? (
+            <ChevronDown className="ml-2 h-4 w-4" />
+          ) : (
+            <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+          )}
+        </Button>
+      ),
       cell: ({ row }: { row: Row<Appointment> }) => (
-        <div>
+        <div className="text-sm text-muted-foreground">
           {row.original.contacts.first_name} {row.original.contacts.last_name}
         </div>
       ),
     },
     {
       accessorKey: "contacts.email",
-      header: "Email",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="text-sm font-medium text-foreground hover:text-foreground/80 px-0"
+        >
+          Email
+          {column.getIsSorted() === "asc" ? (
+            <ChevronUp className="ml-2 h-4 w-4" />
+          ) : column.getIsSorted() === "desc" ? (
+            <ChevronDown className="ml-2 h-4 w-4" />
+          ) : (
+            <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+          )}
+        </Button>
+      ),
       cell: ({ row }: { row: Row<Appointment> }) => (
-        <div className="max-w-[200px] truncate">
+        <div className="text-sm text-muted-foreground max-w-[200px] truncate">
           {row.original.contacts.email}
         </div>
       ),
@@ -252,7 +293,7 @@ export function AppointmentTable({
         const statusConfig = getStatusConfig(status)
         const StatusIcon = statusConfig.icon
         return (
-          <Badge variant="outline" className="flex w-[110px] items-center gap-1 px-1.5 text-muted-foreground [&_svg]:size-3">
+          <Badge variant="outline" className="inline-flex items-center gap-2 px-2 text-muted-foreground font-medium [&_svg]:size-3">
             <StatusIcon className={statusConfig.className} />
             {statusConfig.label}
           </Badge>
@@ -335,14 +376,14 @@ export function AppointmentTable({
     <div className="space-y-4 ">
       {(isLoading || table.getRowModel().rows?.length > 0) && (
         <>
-          <div className="rounded-md border overflow-hidden">
+          <div className=" overflow-hidden">
             <Table>
-              <TableHeader className="bg-muted">
+              <TableHeader className="">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header) => {
                       return (
-                        <TableHead key={header.id}>
+                        <TableHead key={header.id} className="text-sm font-medium text-foreground">
                           {header.isPlaceholder
                             ? null
                             : flexRender(
@@ -360,7 +401,7 @@ export function AppointmentTable({
                   <TableRow>
                     <TableCell
                       colSpan={columns.length}
-                      className="h-24 text-center"
+                      className="h-24 text-center text-sm"
                     >
                       Chargement...
                     </TableCell>
@@ -625,14 +666,14 @@ export default function MeetingsPage() {
 
       <Tabs defaultValue="upcoming" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="upcoming" className="flex items-center gap-2">
-            À venir <span className="rounded bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 px-1.5 py-0.5 text-xs">{upcomingAppointments.length}</span>
+          <TabsTrigger value="upcoming" className="group flex items-center gap-2 text-muted-foreground data-[state=active]:text-blue-600 hover:text-foreground transition-colors pb-3">
+            À venir <span className="rounded bg-muted text-muted-foreground group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-600 px-1.5 py-0.5 text-xs transition-colors">{upcomingAppointments.length}</span>
           </TabsTrigger>
-          <TabsTrigger value="past" className="flex items-center gap-2">
-            Passés <span className="rounded bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 px-1.5 py-0.5 text-xs">{pastAppointments.length}</span>
+          <TabsTrigger value="past" className="group flex items-center gap-2 text-muted-foreground data-[state=active]:text-blue-600 hover:text-foreground transition-colors pb-3">
+            Passés <span className="rounded bg-muted text-muted-foreground group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-600 px-1.5 py-0.5 text-xs transition-colors">{pastAppointments.length}</span>
           </TabsTrigger>
-          <TabsTrigger value="canceled" className="flex items-center gap-2">
-            Annulés <span className="rounded bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 px-1.5 py-0.5 text-xs">{canceledAppointments.length}</span>
+          <TabsTrigger value="canceled" className="group flex items-center gap-2 text-muted-foreground data-[state=active]:text-blue-600 hover:text-foreground transition-colors pb-3">
+            Annulés <span className="rounded bg-muted text-muted-foreground group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-600 px-1.5 py-0.5 text-xs transition-colors">{canceledAppointments.length}</span>
           </TabsTrigger>
         </TabsList>
         <TabsContent value="upcoming">

@@ -5,6 +5,8 @@ import { TeamProvider } from "@/lib/team-context"
 import { Toaster } from "@/components/ui/sonner"
 import { ThemeProvider } from "@/components/theme-provider"
 import { frFR } from "@clerk/localizations"
+import { LoginTracker } from "@/components/login-tracker"
+import { cn } from "@/lib/utils"
 
 import "@/app/globals.css"
 
@@ -39,9 +41,10 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <TeamProvider>
+              <LoginTracker />
               {children}
+              <Toaster />
             </TeamProvider>
-            <Toaster />
           </ThemeProvider>
         </body>
       </html>
