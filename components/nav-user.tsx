@@ -43,7 +43,7 @@ export function NavUser({
 
   const handleSignOut = async () => {
     await signOut()
-    router.push("/sign-in")
+    router.push("/")
   }
 
   // Si Clerk n'est pas chargé, on affiche un loader
