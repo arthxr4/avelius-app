@@ -204,8 +204,10 @@ export const columns: ColumnDef<Member>[] = [
       
       const handleDelete = async () => {
         try {
-          const response = await fetch(`/api/delete-member?user_id=${member.id}`, {
+          const response = await fetch("/api/delete-member", {
             method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId: member.id })
           })
 
           if (!response.ok) {

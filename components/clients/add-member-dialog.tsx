@@ -76,7 +76,7 @@ export function AddMemberDialog({ clientId, trigger, onSuccess }: AddMemberDialo
         <DialogHeader>
           <DialogTitle>Ajouter un membre</DialogTitle>
           <DialogDescription>
-            Ajoutez un membre existant à ce client.
+            Ajoutez un membre à ce client.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>

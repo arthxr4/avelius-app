@@ -2,29 +2,53 @@ import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { currentUser } from "@clerk/nextjs/server"
 import { clerkClient } from "@clerk/clerk-sdk-node"
+import { createClient } from "@supabase/supabase-js"
 
 export async function DELETE(request: Request) {
+  console.log('--- DEBUT HANDLER DELETE MEMBER ---')
   try {
     const user = await currentUser()
     if (!user) {
+      console.log('Utilisateur non authentifié')
       return new NextResponse("Non authentifié", { status: 401 })
     }
 
-    const body = await request.json()
-    const { userEmail } = body
+    let body
+    try {
+      body = await request.json()
+      console.log('Body reçu:', body)
+    } catch (e) {
+      console.error('Erreur parsing JSON:', e)
+      return new NextResponse("Body JSON invalide", { status: 400 })
+    }
 
-    if (!userEmail) {
-      return new NextResponse("Email de l'utilisateur requis", { status: 400 })
+    const { userId } = body || {}
+    if (!userId) {
+      console.log('userId manquant dans le body')
+      return new NextResponse("ID Clerk requis", { status: 400 })
     }
 
     const supabase = await createServerSupabaseClient()
+    const supabaseService = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
-    // 1. Récupérer l'ID Clerk de l'utilisateur depuis Supabase
-    const { data: userData, error: userError } = await supabase
+    console.log('--- DELETE MEMBER API ---')
+    console.log('userId reçu:', userId)
+
+    // DEBUG : log tous les ids présents dans la table users
+    const allUsers = await supabaseService
+      .from("users")
+      .select("id")
+    console.log("Tous les ids dans Supabase:", allUsers.data)
+    console.log("userId reçu pour suppression:", userId)
+
+    const { data: userData, error: userError } = await supabaseService
       .from("users")
       .select("id, invited")
-      .eq("email", userEmail)
-      .single()
+      .eq("id", userId)
+      .maybeSingle()
 
     if (userError) {
       console.error("Erreur lors de la récupération de l'utilisateur:", userError)
@@ -35,34 +59,39 @@ export async function DELETE(request: Request) {
       return new NextResponse("Utilisateur non trouvé", { status: 404 })
     }
 
-    // 2. Supprimer l'utilisateur ou révoquer l'invitation dans Clerk
+    // Tente la suppression dans Clerk, mais ignore toute erreur
     try {
-      if (userData.id.startsWith('inv_')) {
-        // C'est une invitation, on la révoque
-        await clerkClient.invitations.revokeInvitation(userData.id)
-      } else {
-        // C'est un utilisateur actif, on le supprime
-        await clerkClient.users.deleteUser(userData.id)
-      }
-    } catch (error) {
-      console.error("Erreur lors de la suppression dans Clerk:", error)
-      return new NextResponse("Erreur lors de la suppression dans Clerk", { status: 500 })
+      console.log('Tentative de suppression invitation Clerk pour', userId)
+      await clerkClient.invitations.revokeInvitation(userId)
+      console.log('Suppression invitation Clerk OK')
+    } catch (e) {
+      console.warn('Erreur suppression invitation Clerk (ignorée):', e)
+    }
+    try {
+      console.log('Tentative de suppression user Clerk pour', userId)
+      await clerkClient.users.deleteUser(userId)
+      console.log('Suppression user Clerk OK')
+    } catch (e) {
+      console.warn('Erreur suppression user Clerk (ignorée):', e)
     }
 
-    // 3. Supprimer l'utilisateur de Supabase
-    const { error } = await supabase
+    // Supprime toujours dans Supabase
+    console.log('Suppression dans Supabase pour', userId)
+    const { error: supabaseError } = await supabaseService
       .from("users")
       .delete()
-      .eq("email", userEmail)
+      .eq("id", userId)
 
-    if (error) {
-      console.error("Erreur lors de la suppression de l'utilisateur dans Supabase:", error)
+    if (supabaseError) {
+      console.error("Erreur lors de la suppression de l'utilisateur dans Supabase:", supabaseError)
       return new NextResponse("Erreur lors de la suppression de l'utilisateur dans Supabase", { status: 500 })
     }
 
+    console.log('Suppression terminée pour', userId)
+    console.log('--- FIN HANDLER DELETE MEMBER ---')
     return new NextResponse(null, { status: 204 })
   } catch (error) {
-    console.error("Erreur:", error)
+    console.error('ERREUR GLOBALE DANS DELETE MEMBER:', error)
     return new NextResponse("Erreur interne du serveur", { status: 500 })
   }
 } 

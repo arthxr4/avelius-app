@@ -206,8 +206,7 @@ export default function ClientPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          clientId,
-          userEmail: memberToDelete.user_email,
+          userId: memberToDelete.id,
         }),
       })
 
