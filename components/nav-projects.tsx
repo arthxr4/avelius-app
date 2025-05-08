@@ -44,9 +44,9 @@ export function NavProjects({
               <Link
                 href={item.url}
                 className={cn(
-                  "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium tracking-tight transition-colors",
+                  "flex items-center gap-2 rounded-lg px-3 py-2 border border-transparent text-sm font-medium tracking-tight transition-colors",
                   pathname === item.url
-                    ? "bg-muted text-sidebar-foreground [&>svg]:text-sidebar-foreground"
+                    ? "bg-muted text-sidebar-foreground border-border [&>svg]:text-sidebar-foreground"
                     : "text-sidebar-foreground/70 [&>svg]:text-sidebar-foreground/70 hover:bg-muted hover:text-sidebar-foreground hover:[&>svg]:text-sidebar-foreground"
                 )}
               >

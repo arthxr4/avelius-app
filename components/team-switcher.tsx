@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ChevronsUpDown, Plus, Check } from "lucide-react"
+import { ChevronsUpDown, Plus, Check, Building, UserPlus } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { useUser } from "@clerk/nextjs"
 import { createBrowserClient } from '@supabase/ssr'
@@ -153,10 +153,10 @@ export function TeamSwitcher() {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
             >
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                {current.name.charAt(0)}
+                <Building className="size-5" />
               </div>
               <span className="flex-1 truncate text-left text-sm font-semibold">
                 {current.name}
@@ -165,12 +165,11 @@ export function TeamSwitcher() {
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+            className="w-[--radix-dropdown-menu-trigger-width] min-w-96 rounded-lg"
             align="start"
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
           >
-            
             <div className="px-2 py-2">
               <Input
                 placeholder="Rechercher un client..."
@@ -191,26 +190,28 @@ export function TeamSwitcher() {
                   <DropdownMenuItem
                     key={team.id}
                     onClick={() => handleSelect(team)}
-                    className="gap-2 p-2"
+                    className={cn(
+                      "gap-2 p-2",
+                      current?.id === team.id && "bg-blue-50 hover:bg-blue-100"
+                    )}
                   >
-                    <div className="flex size-6 items-center justify-center rounded-sm border bg-blue-50 text-blue-600">
-                      {team.name.charAt(0)}
+                    <div className="flex size-8 items-center justify-center rounded-sm border bg-blue-50 text-blue-600">
+                      <Building className="size-5" />
                     </div>
                     <span className="font-medium">{team.name}</span>
-                    <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
                   </DropdownMenuItem>
                 ))
               )}
             </div>
             <DropdownMenuSeparator />
-            {isAdmin && (
-              <DropdownMenuItem className="gap-2 p-2" disabled>
-                <div className="flex size-6 items-center justify-center rounded-md border bg-background">
-                  <Plus className="size-4" />
-                </div>
-                <div className="font-medium text-muted-foreground">Ajouter un client</div>
-              </DropdownMenuItem>
-            )}
+            <div className="p-2 space-y-2">
+              <Button className="w-full">
+                Créer une nouvelle équipe
+              </Button>
+              <Button className="w-full" variant="secondary">
+                Inviter dans votre équipe
+              </Button>
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
