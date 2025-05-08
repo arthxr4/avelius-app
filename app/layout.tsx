@@ -7,6 +7,9 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { frFR } from "@clerk/localizations"
 import { LoginTracker } from "@/components/login-tracker"
 import { cn } from "@/lib/utils"
+import { useEffect, useState } from "react"
+import AppLoading from "@/components/AppLoading"
+import ClientLoaderWrapper from "@/components/ClientLoaderWrapper"
 
 import "@/app/globals.css"
 
@@ -34,18 +37,20 @@ export default function RootLayout({
     >
       <html lang="fr" className={`${GeistSans.variable} ${GeistMono.variable}`}>
         <body className={GeistSans.className}>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <TeamProvider>
-              <LoginTracker />
-              {children}
-              <Toaster />
-            </TeamProvider>
-          </ThemeProvider>
+          <ClientLoaderWrapper>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <TeamProvider>
+                <LoginTracker />
+                {children}
+                <Toaster />
+              </TeamProvider>
+            </ThemeProvider>
+          </ClientLoaderWrapper>
         </body>
       </html>
     </ClerkProvider>

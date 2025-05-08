@@ -40,17 +40,17 @@ export function NavProjects({
       <SidebarMenu>
         {projects.map((item) => (
           <SidebarMenuItem key={item.name}>
-            <SidebarMenuButton tooltip={item.name} asChild>
+            <SidebarMenuButton tooltip={item.name} asChild isActive={pathname === item.url}>
               <Link
                 href={item.url}
                 className={cn(
                   "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium tracking-tight transition-colors",
                   pathname === item.url
-                    ? "bg-muted font-semibold"
-                    : "hover:bg-muted"
+                    ? "bg-muted text-sidebar-foreground [&>svg]:text-sidebar-foreground"
+                    : "text-sidebar-foreground/70 [&>svg]:text-sidebar-foreground/70 hover:bg-muted hover:text-sidebar-foreground hover:[&>svg]:text-sidebar-foreground"
                 )}
               >
-                <item.icon className="h-3.5 w-3.5 ![&>svg]:h-3.5 ![&>svg]:w-3.5" />
+                <item.icon className="h-4 w-4 text-inherit !text-inherit" />
                 <span>{item.name}</span>
               </Link>
             </SidebarMenuButton>
