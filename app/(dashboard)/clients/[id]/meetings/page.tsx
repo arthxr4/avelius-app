@@ -71,6 +71,7 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AddAppointmentDialog } from "@/components/add-appointment-dialog"
 import { Checkbox } from "@/components/ui/checkbox"
+import { BadgeSimple } from "@/components/ui/badge-simple"
 
 type Contact = {
   first_name: string
@@ -210,7 +211,7 @@ export function AppointmentTable({
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="text-sm font-medium text-foreground hover:text-foreground/80 px-0"
+            className="text-sm font-normal text-foreground hover:text-foreground/80 px-0"
           >
             Date
             {column.getIsSorted() === "asc" ? (
@@ -256,7 +257,7 @@ export function AppointmentTable({
         </Button>
       ),
       cell: ({ row }: { row: Row<Appointment> }) => (
-        <div className="text-sm text-muted-foreground">
+        <div className="text-sm font-medium text-muted-foreground">
           {row.original.contacts.first_name} {row.original.contacts.last_name}
         </div>
       ),
@@ -267,7 +268,7 @@ export function AppointmentTable({
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="text-sm font-medium text-foreground hover:text-foreground/80 px-0"
+          className="text-sm font-normal text-foreground hover:text-foreground/80 px-0"
         >
           Email
           {column.getIsSorted() === "asc" ? (
@@ -280,7 +281,7 @@ export function AppointmentTable({
         </Button>
       ),
       cell: ({ row }: { row: Row<Appointment> }) => (
-        <div className="text-sm text-muted-foreground max-w-[200px] truncate">
+        <div className="text-sm font-medium text-muted-foreground max-w-[200px] truncate">
           {row.original.contacts.email}
         </div>
       ),
@@ -290,13 +291,8 @@ export function AppointmentTable({
       header: "Statut",
       cell: ({ row }: { row: Row<Appointment> }) => {
         const status = row.getValue("status") as string
-        const statusConfig = getStatusConfig(status)
-        const StatusIcon = statusConfig.icon
         return (
-          <Badge variant="outline" className="inline-flex items-center gap-2 px-2 text-muted-foreground font-medium [&_svg]:size-3">
-            <StatusIcon className={statusConfig.className} />
-            {statusConfig.label}
-          </Badge>
+          <BadgeSimple status={status} />
         )
       },
     },
