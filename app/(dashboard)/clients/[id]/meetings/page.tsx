@@ -662,14 +662,14 @@ export default function MeetingsPage() {
 
       <Tabs defaultValue="upcoming" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="upcoming" className="group flex items-center gap-2 text-muted-foreground data-[state=active]:text-blue-600 hover:text-foreground transition-colors pb-3">
-            À venir <span className="rounded bg-muted text-muted-foreground group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-600 px-1.5 py-0.5 text-xs transition-colors">{upcomingAppointments.length}</span>
+          <TabsTrigger value="upcoming" className="group flex items-center gap-2 text-muted-foreground data-[state=active]:text-orange-600 hover:text-foreground transition-colors pb-3">
+            À venir <span className="rounded bg-muted text-muted-foreground group-data-[state=active]:bg-orange-100 group-data-[state=active]:text-orange-600 px-1.5 py-0.5 text-xs transition-colors">{upcomingAppointments.length}</span>
           </TabsTrigger>
-          <TabsTrigger value="past" className="group flex items-center gap-2 text-muted-foreground data-[state=active]:text-blue-600 hover:text-foreground transition-colors pb-3">
-            Passés <span className="rounded bg-muted text-muted-foreground group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-600 px-1.5 py-0.5 text-xs transition-colors">{pastAppointments.length}</span>
+          <TabsTrigger value="past" className="group flex items-center gap-2 text-muted-foreground data-[state=active]:text-orange-600 hover:text-foreground transition-colors pb-3">
+            Passés <span className="rounded bg-muted text-muted-foreground group-data-[state=active]:bg-orange-100 group-data-[state=active]:text-orange-600 px-1.5 py-0.5 text-xs transition-colors">{pastAppointments.length}</span>
           </TabsTrigger>
-          <TabsTrigger value="canceled" className="group flex items-center gap-2 text-muted-foreground data-[state=active]:text-blue-600 hover:text-foreground transition-colors pb-3">
-            Annulés <span className="rounded bg-muted text-muted-foreground group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-600 px-1.5 py-0.5 text-xs transition-colors">{canceledAppointments.length}</span>
+          <TabsTrigger value="canceled" className="group flex items-center gap-2 text-muted-foreground data-[state=active]:text-orange-600 hover:text-foreground transition-colors pb-3">
+            Annulés <span className="rounded bg-muted text-muted-foreground group-data-[state=active]:bg-orange-100 group-data-[state=active]:text-orange-600 px-1.5 py-0.5 text-xs transition-colors">{canceledAppointments.length}</span>
           </TabsTrigger>
         </TabsList>
         <TabsContent value="upcoming">

@@ -20,7 +20,7 @@ const TabsList = React.forwardRef<
     {...props}
   >
     {props.children}
-    <div className="absolute bottom-0 h-0.5 bg-blue-600 transition-all duration-300 ease-out" />
+    <div className="absolute bottom-0 h-0.5 bg-orange-500 transition-all duration-300 ease-out" />
   </TabsPrimitive.List>
 ))
 TabsList.displayName = TabsPrimitive.List.displayName
@@ -74,7 +74,7 @@ const TabsTrigger = React.forwardRef<
     <TabsPrimitive.Trigger
       ref={triggerRef}
       className={cn(
-        "inline-flex items-center justify-center whitespace-nowrap px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 relative -mb-px",
+        "inline-flex items-center justify-center whitespace-nowrap px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 relative -mb-px text-orange-500",
         className
       )}
       {...props}

@@ -302,7 +302,7 @@ export default function ProspectingListsPage() {
                   <tr
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
-                    className="cursor-pointer hover:bg-muted/50 h-10 border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-blue-50/70"
+                    className="cursor-pointer hover:bg-muted/50 h-10 border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-orange-50/70"
                     onClick={(e) => {
                       const target = e.target as HTMLElement
                       if (

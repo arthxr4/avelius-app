@@ -142,8 +142,8 @@ function AnalyticsCard({
 const chartConfig = {
   appointments: {
     label: "Rendez-vous",
-    color: "#2563eb",
-    activeColor: "#1d4ed8",
+    color: "#fe490c",
+    activeColor: "#fe490c",
   },
 } satisfies ChartConfig
 
@@ -154,7 +154,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     <div className="rounded-lg border bg-background p-2 shadow-sm">
       <div className="text-sm font-medium">{label}</div>
       <div className="flex items-center gap-2 text-sm">
-        <div className="h-2 w-2 rounded-sm" style={{ backgroundColor: "#2563eb" }} />
+        <div className="h-2 w-2 rounded-sm" style={{ backgroundColor: "#fe490c" }} />
         <span className="font-medium">{payload[0]?.value} rendez-vous</span>
       </div>
     </div>
@@ -653,12 +653,12 @@ export default function ClientOverview() {
                       />
                       <Bar
                         dataKey="appointments"
-                        fill="#2563eb"
+                        fill="#fe490c"
                         radius={[4, 4, 0, 0]}
                         maxBarSize={50}
                         cursor="pointer"
                         activeBar={{
-                          fill: "#1d4ed8",
+                          fill: "#fe490c",
                         }}
                       />
                     </BarChart>

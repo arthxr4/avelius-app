@@ -17,6 +17,19 @@ const config: Config = {
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
+  			orange: {
+  				'50': '#fff4ed',
+  				'100': '#ffe6d4',
+  				'200': '#ffc9a8',
+  				'300': '#ffa471',
+  				'400': '#ff7338',
+  				'500': '#fe490c',
+  				'600': '#ef3107',
+  				'700': '#c62108',
+  				'800': '#9d1c0f',
+  				'900': '#7e1b10',
+  				'950': '#440906',
+  			},
   			card: {
   				DEFAULT: 'hsl(var(--card))',
   				foreground: 'hsl(var(--card-foreground))'
