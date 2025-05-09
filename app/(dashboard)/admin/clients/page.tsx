@@ -36,6 +36,7 @@ import {
   Trash,
   ArrowUpDown,
   UserCog,
+  Building2,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { format } from "date-fns"
@@ -97,19 +98,18 @@ export default function ClientsManagerPage() {
       header: ({ column }) => {
         return (
           <div className="text-xs font-medium">
-            Nom
+            Client
           </div>
         )
       },
       cell: ({ row }) => {
         const name = row.getValue("name") as string
         return (
-          <div className="text-sm font-normal pl-0 flex items-center gap-2">
-            <Avatar className="h-7 w-7">
-              <AvatarFallback className="text-xs bg-orange-600 text-orange-50">
-                {name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+          <div className="text-sm font-medium pl-0 flex items-center gap-2">
+           
+            <div className="flex size-8 items-center justify-center rounded-sm border bg-blue-50 text-blue-600 border-blue-200">
+                      <Building2 className="size-4" />
+                    </div>
             {name}
           </div>
         )
@@ -344,7 +344,7 @@ export default function ClientsManagerPage() {
                     let columnLabel = column.id
                     switch (column.id) {
                       case "name":
-                        columnLabel = "Nom"
+                        columnLabel = "Client"
                         break
                       case "created_at":
                         columnLabel = "Date de création"
@@ -496,7 +496,7 @@ export default function ClientsManagerPage() {
                   <tr
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
-                    className="cursor-pointer hover:bg-muted/50 h-10 border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-orange-50/70"
+                    className="cursor-pointer hover:bg-muted/50 h-10 border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-blue-50/70"
                     onClick={(e) => {
                       const target = e.target as HTMLElement
                       if (

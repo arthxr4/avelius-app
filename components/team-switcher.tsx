@@ -126,7 +126,7 @@ export function TeamSwitcher() {
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton size="lg" className="gap-4">
-            <Skeleton className="size-8 rounded-lg" />
+            <Skeleton className="size-8 rounded-sm" />
             <Skeleton className="h-4 flex-1" />
           </SidebarMenuButton>
         </SidebarMenuItem>
@@ -165,7 +165,7 @@ export function TeamSwitcher() {
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="w-[--radix-dropdown-menu-trigger-width] min-w-96 rounded-lg"
+            className="w-[--radix-dropdown-menu-trigger-width] min-w-96 rounded-sm"
             align="start"
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
