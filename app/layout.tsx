@@ -15,6 +15,8 @@ import { Metadata } from 'next'
 import "@/app/globals.css"
 
 export const metadata: Metadata = {
+  title: 'Avelius',
+  description: 'Plateforme de gestion de projets et de tâches',
   icons: {
     icon: '/favicon.png',
   },
