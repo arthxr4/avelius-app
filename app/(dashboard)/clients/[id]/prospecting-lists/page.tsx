@@ -207,7 +207,7 @@ export default function ProspectingListsPage() {
       <div className="sticky top-0 z-20 bg-background">
         <div className="flex items-center justify-between py-4 px-4">
           <div>
-            <h1 className="text-md font-semibold">Listes de prospection</h1>
+            <h1 className="text-lg font-semibold">Listes de prospection</h1>
           <p className="text-sm text-muted-foreground">
             Gérez vos listes de prospects et suivez leur progression
           </p>
@@ -302,7 +302,7 @@ export default function ProspectingListsPage() {
                   <tr
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
-                    className="cursor-pointer hover:bg-muted/50 h-10 border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-orange-50/70"
+                    className="cursor-pointer hover:bg-muted/50 h-10 border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-blue-50/70"
                     onClick={(e) => {
                       const target = e.target as HTMLElement
                       if (

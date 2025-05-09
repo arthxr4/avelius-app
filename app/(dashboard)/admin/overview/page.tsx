@@ -294,12 +294,12 @@ export default function AdminOverviewPage() {
                   />
                   <Bar
                     dataKey="appointments"
-                    fill="#fe490c"
+                    fill="#2563eb"
                     radius={[4, 4, 0, 0]}
                     maxBarSize={50}
                     cursor="pointer"
                     activeBar={{
-                      fill: "#fe490c",
+                      fill: "#1d4ed8",
                     }}
                   />
                 </BarChart>
@@ -390,7 +390,7 @@ export default function AdminOverviewPage() {
                               contract.performance >= contract.expected_performance + 10
                                 ? "text-green-500 border-green-500 bg-green-50" :
                               contract.performance >= contract.expected_performance
-                                ? "text-orange-500 border-orange-500 bg-orange-50" :
+                                ? "text-blue-500 border-blue-500 bg-blue-50" :
                               contract.performance >= contract.expected_performance - 10
                                 ? "text-yellow-500 border-yellow-500 bg-yellow-50" :
                                 "text-red-500 border-red-500 bg-red-50"
@@ -489,7 +489,7 @@ export default function AdminOverviewPage() {
                               contract.performance >= contract.expected_performance + 10
                                 ? "text-green-500 border-green-500 bg-green-50" :
                               contract.performance >= contract.expected_performance
-                                ? "text-orange-500 border-orange-500 bg-orange-50" :
+                                ? "text-blue-500 border-blue-500 bg-blue-50" :
                               contract.performance >= contract.expected_performance - 10
                                 ? "text-yellow-500 border-yellow-500 bg-yellow-50" :
                                 "text-red-500 border-red-500 bg-red-50"
@@ -588,7 +588,7 @@ export default function AdminOverviewPage() {
                               contract.performance >= contract.expected_performance + 10
                                 ? "text-green-500 border-green-500 bg-green-50" :
                               contract.performance >= contract.expected_performance
-                                ? "text-orange-500 border-orange-500 bg-orange-50" :
+                                ? "text-blue-500 border-blue-500 bg-blue-50" :
                               contract.performance >= contract.expected_performance - 10
                                 ? "text-yellow-500 border-yellow-500 bg-yellow-50" :
                                 "text-red-500 border-red-500 bg-red-50"

@@ -32,7 +32,7 @@ export default function ClientDashboard() {
 
       <button
         onClick={createClientTest}
-        className="mt-6 rounded bg-orange-500 px-4 py-2 text-white hover:bg-orange-600"
+        className="mt-6 rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
       >
         ➕ Créer client test (via bouton)
       </button>

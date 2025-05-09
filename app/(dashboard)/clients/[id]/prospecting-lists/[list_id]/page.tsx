@@ -242,7 +242,7 @@ export default function ProspectingListDetailsPage({ params: paramsPromise }: Pr
       <div className="sticky top-0 z-20 bg-background">
         <div className="flex items-center justify-between py-4 px-4">
       <div>
-            <h1 className="text-md font-semibold">{list.title}</h1>
+            <h1 className="text-lg font-semibold">{list.title}</h1>
         <p className="text-sm text-muted-foreground">
               Gérez les contacts de votre liste de prospection
             </p>

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ChevronsUpDown, Plus, Check, Building, UserPlus } from "lucide-react"
+import { ChevronsUpDown, Plus, Check, Building, UserPlus, Building2 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { useUser } from "@clerk/nextjs"
 import { createBrowserClient } from '@supabase/ssr'
@@ -155,8 +155,8 @@ export function TeamSwitcher() {
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-orange-50 text-orange-500 dark:text-orange-600">
-                <Building className="size-5" />
+              <div className="flex aspect-square size-8 items-center justify-center rounded-sm bg-blue-50 text-blue-600 border border-blue-200">
+                <Building2 className="size-4" />
               </div>
               <span className="flex-1 truncate text-left text-sm font-medium">
                 {current.name}
@@ -192,11 +192,11 @@ export function TeamSwitcher() {
                     onClick={() => handleSelect(team)}
                     className={cn(
                       "gap-2 p-2",
-                      current?.id === team.id && "bg-orange-50 hover:bg-orange-100"
+                      current?.id === team.id && "bg-blue-50 hover:bg-blue-100"
                     )}
                   >
-                    <div className="flex size-8 items-center justify-center rounded-sm border bg-orange-50 text-orange-500 dark:text-orange-600">
-                      <Building className="size-5" />
+                    <div className="flex size-8 items-center justify-center rounded-sm border bg-blue-50 text-blue-600 border-blue-200">
+                      <Building2 className="size-4" />
                     </div>
                     <span className="font-medium">{team.name}</span>
                   </DropdownMenuItem>

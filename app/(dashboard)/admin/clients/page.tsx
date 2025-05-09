@@ -106,7 +106,7 @@ export default function ClientsManagerPage() {
         return (
           <div className="text-sm font-normal pl-0 flex items-center gap-2">
             <Avatar className="h-7 w-7">
-              <AvatarFallback className="text-xs bg-blue-600 text-blue-50">
+              <AvatarFallback className="text-xs bg-orange-600 text-orange-50">
                 {name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
               </AvatarFallback>
             </Avatar>
@@ -496,7 +496,7 @@ export default function ClientsManagerPage() {
                   <tr
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
-                    className="cursor-pointer hover:bg-muted/50 h-10 border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-blue-50/70"
+                    className="cursor-pointer hover:bg-muted/50 h-10 border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-orange-50/70"
                     onClick={(e) => {
                       const target = e.target as HTMLElement
                       if (
