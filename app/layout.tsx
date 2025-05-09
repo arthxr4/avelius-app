@@ -10,8 +10,15 @@ import { cn } from "@/lib/utils"
 import { useEffect, useState } from "react"
 import AppLoading from "@/components/AppLoading"
 import ClientLoaderWrapper from "@/components/ClientLoaderWrapper"
+import { Metadata } from 'next'
 
 import "@/app/globals.css"
+
+export const metadata: Metadata = {
+  icons: {
+    icon: '/favicon.png',
+  },
+}
 
 export default function RootLayout({
   children,
@@ -37,6 +44,7 @@ export default function RootLayout({
     >
       <html lang="fr" className={`${GeistSans.variable} ${GeistMono.variable}`}>
         <body className={GeistSans.className}>
+          <AppLoading id="ssr-app-loader" />
           <ClientLoaderWrapper>
             <ThemeProvider
               attribute="class"

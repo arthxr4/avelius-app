@@ -1,8 +1,12 @@
 import Image from "next/image"
 
-export default function AppLoading() {
+interface AppLoadingProps {
+  id?: string
+}
+
+export default function AppLoading({ id }: AppLoadingProps) {
   return (
-    <div className="flex h-screen flex-col items-center justify-center gap-0">
+    <div id={id} className="flex h-screen flex-col items-center justify-center gap-0">
       <div className="relative h-40 w-40">
         <Image
           src="/logo.svg"
