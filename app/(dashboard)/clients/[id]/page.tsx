@@ -180,7 +180,7 @@ function groupAppointmentsByPeriod(appointments: Appointment[], dateRange: DateR
     
     while (currentDate <= dateRange.to) {
       const appointmentsInDay = appointments.filter(app => {
-        const creationDate = new Date(app.created_at)
+      const creationDate = new Date(app.created_at)
         return format(creationDate, "yyyy-MM-dd") === format(currentDate, "yyyy-MM-dd")
       })
 
@@ -212,13 +212,13 @@ function groupAppointmentsByPeriod(appointments: Appointment[], dateRange: DateR
 
       weeks.push({
         period: format(currentDate, "dd MMM", { locale: fr }),
-        appointments: appointmentsInWeek.length,
+      appointments: appointmentsInWeek.length,
       })
 
       currentDate = addWeeks(currentDate, 1)
     }
 
-    return weeks
+  return weeks
   }
 }
 
@@ -571,106 +571,106 @@ export default function ClientOverview() {
         <div className="space-y-6">
           {/* KPIs */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <AnalyticsCard
-              title="Total Rendez-vous"
-              value={data?.analytics.totalAppointments || 0}
-              trend="up"
-              trendValue="+12.5%"
-              description="Tendance à la hausse"
-              icon={Calendar}
-              isLoading={isLoading}
-            />
-            <AnalyticsCard
-              title="Total Prospects"
-              value={data?.analytics.totalProspects || 0}
-              trend="down"
-              trendValue="-20%"
-              description="Acquisition en baisse"
-              icon={Users}
-              isLoading={isLoading}
-            />
-            <AnalyticsCard
-              title="Taux de No-Show"
-              value={`${data?.analytics.noShowRate.toFixed(1) || 0}%`}
-              trend="up"
-              trendValue="+12.5%"
-              description="Rétention forte"
-              icon={UserX}
-              isLoading={isLoading}
-            />
-          </div>
+        <AnalyticsCard
+          title="Total Rendez-vous"
+          value={data?.analytics.totalAppointments || 0}
+          trend="up"
+          trendValue="+12.5%"
+          description="Tendance à la hausse"
+          icon={Calendar}
+          isLoading={isLoading}
+        />
+        <AnalyticsCard
+          title="Total Prospects"
+          value={data?.analytics.totalProspects || 0}
+          trend="down"
+          trendValue="-20%"
+          description="Acquisition en baisse"
+          icon={Users}
+          isLoading={isLoading}
+        />
+        <AnalyticsCard
+          title="Taux de No-Show"
+          value={`${data?.analytics.noShowRate.toFixed(1) || 0}%`}
+          trend="up"
+          trendValue="+12.5%"
+          description="Rétention forte"
+          icon={UserX}
+          isLoading={isLoading}
+        />
+      </div>
 
           {/* Chart */}
-          <Card>
+        <Card>
             <CardHeader>
-              <div>
+            <div>
                 <CardTitle>
                   Rendez-vous créés {getDateDifference(dateRange) <= 30 ? "par jour" : "par semaine"}
                 </CardTitle>
-                <CardDescription>
-                  {chartData.length > 0
+              <CardDescription>
+                {chartData.length > 0
                     ? `${chartData[0].period} - ${chartData[chartData.length - 1].period}`
-                    : "Chargement..."}
-                </CardDescription>
+                  : "Chargement..."}
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4">
+            {isLoading ? (
+              <div className="h-[250px] w-full">
+                <Skeleton className="h-full w-full" />
               </div>
-            </CardHeader>
-            <CardContent className="pt-4">
-              {isLoading ? (
-                <div className="h-[250px] w-full">
-                  <Skeleton className="h-full w-full" />
-                </div>
-              ) : (
-                <div className="h-[250px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
-                      <CartesianGrid 
-                        strokeDasharray="3 3" 
-                        horizontal={true}
-                        vertical={false}
-                        stroke="hsl(var(--border))"
-                      />
-                      <XAxis
+            ) : (
+              <div className="h-[250px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
+                    <CartesianGrid 
+                      strokeDasharray="3 3" 
+                      horizontal={true}
+                      vertical={false}
+                      stroke="hsl(var(--border))"
+                    />
+                    <XAxis
                         dataKey="period"
-                        tickLine={false}
-                        axisLine={false}
-                        tick={{ fill: "hsl(var(--muted-foreground))" }}
-                        tickMargin={10}
-                        fontSize={12}
-                      />
-                      <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fill: "hsl(var(--muted-foreground))" }}
+                      tickMargin={10}
+                      fontSize={12}
+                    />
+                    <YAxis
                         width={20}
-                        tickLine={false}
-                        axisLine={false}
-                        tick={{ fill: "hsl(var(--muted-foreground))" }}
-                        tickMargin={10}
-                        fontSize={12}
-                        domain={[0, (dataMax: number) => Math.max(dataMax, 5)]}
-                      />
-                      <Tooltip
-                        cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
-                        content={<CustomTooltip />}
-                        wrapperStyle={{ zIndex: 1000 }}
-                      />
-                      <Bar
-                        dataKey="appointments"
-                        fill="#2563eb"
-                        radius={[4, 4, 0, 0]}
-                        maxBarSize={50}
-                        cursor="pointer"
-                        activeBar={{
-                          fill: "#1d4ed8",
-                        }}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fill: "hsl(var(--muted-foreground))" }}
+                      tickMargin={10}
+                      fontSize={12}
+                      domain={[0, (dataMax: number) => Math.max(dataMax, 5)]}
+                    />
+                    <Tooltip
+                      cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
+                      content={<CustomTooltip />}
+                      wrapperStyle={{ zIndex: 1000 }}
+                    />
+                    <Bar
+                      dataKey="appointments"
+                      fill="#2563eb"
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={50}
+                      cursor="pointer"
+                      activeBar={{
+                        fill: "#1d4ed8",
+                      }}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+      </Card>
 
           {/* Active Appointments - Version plus compacte */}
-          <ActiveAppointmentsList appointments={data?.appointments || []} isLoading={isLoading} />
-        </div>
+        <ActiveAppointmentsList appointments={data?.appointments || []} isLoading={isLoading} />
+      </div>
 
         {/* Secondary Column */}
         <div className="space-y-6">
@@ -692,7 +692,7 @@ export default function ClientOverview() {
                       <div className="rounded-lg border p-2">
                         <Icon className="h-4 w-4" />
                       </div>
-                      <div>
+      <div>
                         <h3 className="font-medium">{link.title}</h3>
                         <p className="text-sm text-muted-foreground">{link.description}</p>
                       </div>

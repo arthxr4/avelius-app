@@ -71,14 +71,14 @@ const TabsTrigger = React.forwardRef<
   }, [])
 
   return (
-    <TabsPrimitive.Trigger
+  <TabsPrimitive.Trigger
       ref={triggerRef}
-      className={cn(
+    className={cn(
         "inline-flex items-center justify-center whitespace-nowrap px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 relative -mb-px",
-        className
-      )}
-      {...props}
-    />
+      className
+    )}
+    {...props}
+  />
   )
 })
 TabsTrigger.displayName = TabsPrimitive.Trigger.displayName

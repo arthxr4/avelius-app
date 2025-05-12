@@ -54,6 +54,15 @@ import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { BadgePerso } from "@/components/ui/BadgePerso"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Loader2 } from "lucide-react"
 
 type Client = {
   id: string
@@ -72,6 +81,10 @@ export default function ClientsManagerPage() {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
+  const [clientToDelete, setClientToDelete] = React.useState<Client | null>(null)
+  const [confirmDelete, setConfirmDelete] = React.useState("")
+  const [isDeleting, setIsDeleting] = React.useState(false)
+  const [selectedClientsToDelete, setSelectedClientsToDelete] = React.useState<Client[]>([])
 
   const columns: ColumnDef<Client>[] = [
     {
@@ -205,8 +218,11 @@ export default function ClientsManagerPage() {
                 />
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => handleDelete(client.id)}
-                  className="text-destructive"
+                  onClick={() => {
+                    setClientToDelete(client)
+                    setConfirmDelete("")
+                  }}
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                 >
                   <Trash className="mr-2 h-4 w-4" />
                   Supprimer
@@ -270,12 +286,15 @@ export default function ClientsManagerPage() {
 
   const handleDelete = async (clientId: string) => {
     try {
+      setIsDeleting(true)
       const response = await fetch(`/api/delete-client?id=${clientId}`, {
         method: "DELETE",
       })
       if (response.ok) {
         setData((prev) => prev.filter((client) => client.id !== clientId))
         toast.success("Le client a été supprimé avec succès")
+        setClientToDelete(null)
+        setConfirmDelete("")
       } else {
         const error = await response.json()
         console.error("Erreur lors de la suppression:", error)
@@ -284,6 +303,24 @@ export default function ClientsManagerPage() {
     } catch (error) {
       console.error("Erreur:", error)
       toast.error("Erreur lors de la suppression du client")
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    try {
+      setIsDeleting(true)
+      for (const client of selectedClientsToDelete) {
+        await handleDelete(client.id)
+      }
+      table.resetRowSelection()
+      setSelectedClientsToDelete([])
+    } catch (error) {
+      console.error("Erreur lors de la suppression multiple:", error)
+      toast.error("Erreur lors de la suppression des clients")
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -314,12 +351,20 @@ export default function ClientsManagerPage() {
             {table.getFilteredSelectedRowModel().rows.length > 0 && (
               <Button 
                 variant="destructive" 
-                size=""
+                size="default"
                 onClick={() => {
-                  table.getFilteredSelectedRowModel().rows.forEach(row => {
-                    handleDelete(row.original.id)
-                  })
-                  table.resetRowSelection()
+                  const selectedClients = table.getFilteredSelectedRowModel().rows.map(row => row.original)
+                  setSelectedClientsToDelete(selectedClients)
+                  const fakeClient: Client = {
+                    id: 'multiple',
+                    name: `${selectedClients.length} clients`,
+                    created_at: '',
+                    created_by: '',
+                    status: '',
+                    members_count: 0
+                  }
+                  setClientToDelete(fakeClient)
+                  setConfirmDelete("")
                 }}
               >
                 <Trash className="mr-2 h-4 w-4" />
@@ -610,6 +655,64 @@ export default function ClientsManagerPage() {
           </div>
         </div>
       </div>
+
+      {/* Dialog de confirmation de suppression */}
+      <Dialog open={!!clientToDelete} onOpenChange={(open) => {
+        if (!open) {
+          setClientToDelete(null)
+          setConfirmDelete("")
+          setSelectedClientsToDelete([])
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmer la suppression</DialogTitle>
+            <DialogDescription>
+              {clientToDelete?.id === 'multiple' ? (
+                <>Cette action est irréversible. Pour confirmer la suppression de <span className="font-medium">{selectedClientsToDelete.length} clients</span>, veuillez saisir "SUPPRIMER" ci-dessous.</>
+              ) : (
+                <>Cette action est irréversible. Pour confirmer la suppression de ce client, veuillez saisir "<span className="font-medium">{clientToDelete?.name}</span>" ci-dessous.</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Input
+                placeholder={clientToDelete?.id === 'multiple' ? 'Saisir "SUPPRIMER"' : `Saisir "${clientToDelete?.name}"`}
+                value={confirmDelete}
+                onChange={(e) => setConfirmDelete(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setClientToDelete(null)
+                setConfirmDelete("")
+                setSelectedClientsToDelete([])
+              }}
+              disabled={isDeleting}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => clientToDelete?.id === 'multiple' ? handleBulkDelete() : handleDelete(clientToDelete!.id)}
+              disabled={(clientToDelete?.id === 'multiple' ? confirmDelete !== "SUPPRIMER" : confirmDelete !== clientToDelete?.name) || isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Suppression...
+                </>
+              ) : (
+                'Supprimer'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 } 

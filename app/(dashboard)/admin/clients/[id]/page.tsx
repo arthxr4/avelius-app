@@ -71,6 +71,7 @@ interface Member {
   user_email: string
   accepted_at: string | null
   users: {
+    id: string
     first_name: string
     last_name: string
     email: string
@@ -206,7 +207,7 @@ export default function ClientPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId: memberToDelete.id,
+          userId: memberToDelete.users.id,
         }),
       })
 

@@ -39,6 +39,7 @@ export async function GET(req: Request) {
     .select(`
       *,
       users:user_email (
+        id,
         first_name,
         last_name,
         email,

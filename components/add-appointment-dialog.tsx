@@ -112,7 +112,7 @@ const formSchema = z.object({
   }, {
     message: "Veuillez entrer un numéro de téléphone français valide",
   }),
-  listId: z.string().min(1, "Veuillez sélectionner une liste"),
+  listId: z.string().optional(),
 }).refine((data) => {
   // Au moins un moyen de contact (email ou téléphone) doit être renseigné
   return data.email !== "" || data.phone !== "";
@@ -149,6 +149,29 @@ export function AddAppointmentDialog({ clientId, onAppointmentCreated }: AddAppo
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       setIsContactSaving(true)
+      let listId = values.listId
+      if (lists.length === 0) {
+        // Créer une liste par défaut
+        const listResponse = await fetch("/api/create-prospecting-list", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            client_id: clientId,
+            title: "Liste principale",
+            date: new Date().toISOString().slice(0, 10),
+            status: "pending",
+            contacts: []
+          })
+        })
+        if (listResponse.ok) {
+          const newList = await listResponse.json()
+          listId = newList.id
+        } else {
+          toast.error("Erreur lors de la création de la liste par défaut")
+          setIsContactSaving(false)
+          return
+        }
+      }
       const response = await fetch("/api/create-contact", {
         method: "POST",
         headers: {
@@ -161,9 +184,9 @@ export function AddAppointmentDialog({ clientId, onAppointmentCreated }: AddAppo
           email: values.email,
           company: values.company,
           phone: values.phone,
+          list_id: listId,
         }),
       })
-
       if (response.ok) {
         const newContact = await response.json()
         toast.success("Contact créé avec succès")
@@ -665,38 +688,39 @@ export function AddAppointmentDialog({ clientId, onAppointmentCreated }: AddAppo
                           )}
                         />
                       </div>
-                      <FormField
-                        control={form.control}
-                        name="listId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              Liste associée
-                              <span className="text-destructive ml-1">*</span>
-                            </FormLabel>
-                            <Select
-                              value={field.value}
-                              onValueChange={field.onChange}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Sélectionner une liste" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {lists.map((list) => (
-                                  <SelectItem key={list.id} value={list.id}>
-                                    {list.title}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      {lists.length > 0 && (
+                        <FormField
+                          control={form.control}
+                          name="listId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>
+                                Liste associée
+                                <span className="text-destructive ml-1">*</span>
+                              </FormLabel>
+                              <Select
+                                value={field.value}
+                                onValueChange={field.onChange}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Sélectionner une liste" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {lists.map((list) => (
+                                    <SelectItem key={list.id} value={list.id}>
+                                      {list.title}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
                       <div className="flex justify-end gap-2">
-                        
                         <Button
                           type="submit"
                           disabled={
@@ -704,7 +728,7 @@ export function AddAppointmentDialog({ clientId, onAppointmentCreated }: AddAppo
                             Object.keys(form.formState.errors).length > 0 ||
                             !form.getValues("firstName") ||
                             !form.getValues("lastName") ||
-                            !form.getValues("listId") ||
+                            (lists.length > 0 && !form.getValues("listId")) ||
                             (form.getFieldState("email").isTouched && 
                              form.getFieldState("phone").isTouched && 
                              !form.getValues("email") && 

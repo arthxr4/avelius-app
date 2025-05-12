@@ -88,21 +88,21 @@ export function DataTable<TData, TValue>({
   return (
     <div>
       <div className="flex items-center justify-start py-2">
-        <Select
-          value={(table.getColumn("role")?.getFilterValue() as string) ?? "all"}
-          onValueChange={(value) =>
-            table.getColumn("role")?.setFilterValue(value === "all" ? null : value)
-          }
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Tous les rôles" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous les rôles</SelectItem>
-            <SelectItem value="admin">Admin</SelectItem>
-            <SelectItem value="agent">Agent</SelectItem>
-          </SelectContent>
-        </Select>
+          <Select
+            value={(table.getColumn("role")?.getFilterValue() as string) ?? "all"}
+            onValueChange={(value) =>
+              table.getColumn("role")?.setFilterValue(value === "all" ? null : value)
+            }
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Tous les rôles" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les rôles</SelectItem>
+              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="agent">Agent</SelectItem>
+            </SelectContent>
+          </Select>
       </div>
       <div className="rounded-md border">
         <Table>
