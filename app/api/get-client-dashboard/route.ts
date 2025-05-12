@@ -124,12 +124,56 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Récupérer le nom du client
+    const { data: clientData, error: clientError } = await supabase
+      .from('clients')
+      .select('name')
+      .eq('id', clientId)
+      .single()
+
+    if (clientError) {
+      console.error('Erreur lors de la récupération du nom du client:', clientError)
+    }
+
+    // --- AJOUT : Récupérer le contrat actif/à venir/premier ---
+    const { data: contracts, error: contractsError } = await supabase
+      .from('client_contracts')
+      .select('*')
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: true })
+
+    let contract = null
+    if (contracts && contracts.length > 0) {
+      contract = contracts.find(c => c.status === 'active')
+        || contracts.find(c => c.status === 'upcoming')
+        || contracts[0]
+    }
+
+    // --- AJOUT : Récupérer la période en cours/à venir/première du contrat ---
+    let period = null
+    if (contract) {
+      const { data: periods, error: periodsError } = await supabase
+        .from('contract_periods')
+        .select('*')
+        .eq('contract_id', contract.id)
+        .order('period_start', { ascending: true })
+
+      if (periods && periods.length > 0) {
+        period = periods.find(p => p.status === 'active')
+          || periods.find(p => p.status === 'upcoming')
+          || periods[0]
+      }
+    }
+
     // Retourner toutes les données
     return new Response(JSON.stringify({
       appointments: appointments || [],
       contacts: contacts || [],
       analytics,
-      timeRanges
+      timeRanges,
+      clientName: clientData?.name || null,
+      contract,
+      period
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator"
 import { format } from "date-fns"
 import { fr } from "date-fns/locale"
-import { Copy, FileText, MoreHorizontal, Plus, Users, Pencil, CalendarDays, Target, Clock, Trash2, MoreVertical, Loader2 } from "lucide-react"
+import { Copy, FileText, MoreHorizontal, Plus, Users, Pencil, CalendarDays, Target, Clock, Trash2, MoreVertical, Loader2, RepeatIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import {
@@ -357,169 +357,101 @@ export default function ClientPage() {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-7">
         {/* Colonne principale */}
         <div className="space-y-6 md:col-span-5">
-          {/* Section Contrat */}
-          <div className={`grid gap-6 grid-cols-1 ${clientData && clientData.contracts && clientData.contracts.length > 0 ? 'md:grid-cols-2' : 'md:col-span-2'}`}>
-            <Card className={clientData && clientData.contracts && clientData.contracts.length > 0 ? '' : 'md:col-span-2'}>
-              <CardHeader>
-                <CardTitle>Contrat</CardTitle>
-                <CardDescription>Détails du contrat client</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {clientData && clientData.contracts && clientData.contracts.length > 0 ? (
-                  <div className="space-y-6">
-                    {clientData.contracts.map((contract) => (
-                      <div key={contract.id} className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <Badge variant={
-                                contract.status === 'active' ? 'default' :
-                                contract.status === 'completed' ? 'secondary' :
-                                'outline'
-                              }>
-                                {contract.status === 'active' ? 'Actif' :
-                                 contract.status === 'completed' ? 'Terminé' :
-                                 'À venir'}
-                              </Badge>
-                              <Badge variant="outline">
-                                {contract.is_recurring ? 'Récurrent' : 'One-shot'}
-                              </Badge>
-                              {contract.is_recurring && (
-                                <Badge variant="secondary">
-                                  {contract.recurrence_every}{' '}
-                                  {contract.recurrence_unit === 'month' ? 'mois' : 'jours'}
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              Du {formatDate(contract.start_date)} {contract.end_date ? `au ${formatDate(contract.end_date)}` : ''}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm font-medium">Objectif par défaut</p>
-                            <p className="text-2xl font-bold">{contract.default_goal} RDV</p>
-                          </div>
-                        </div>
-                        {contract.status === 'active' && (
-                          <Button variant="outline" className="w-full">
-                            <Clock className="mr-2 h-4 w-4" />
-                            Gérer le contrat
-                          </Button>
+          {/* Section Contrat & Période en cours (fusionnées) */}
+          {clientData && Array.isArray(clientData.contracts) && clientData.contracts.length > 0 && (
+            (() => {
+              // On prend le contrat 'active' s'il existe, sinon le premier 'upcoming', sinon le premier tout court
+              let contract = clientData.contracts.find(c => c.status === 'active')
+              if (!contract) contract = clientData.contracts.find(c => c.status === 'upcoming')
+              if (!contract) contract = clientData.contracts[0]
+              if (!contract) return null
+              const activePeriod = contract.periods?.find(p => p.status === 'active') || contract.periods?.find(p => p.status === 'upcoming')
+              // Prépare la prochaine période si récurrence
+              let nextPeriod = null
+              if (contract.is_recurring && Array.isArray(contract.periods)) {
+                nextPeriod = contract.periods.find(p => p.status === 'upcoming')
+              }
+              return (
+                <Card className="relative overflow-hidden">
+                  {/* Header visuel */}
+                  <div className="flex items-center justify-between bg-gradient-to-tr from-blue-100 to-blue-300 p-6 rounded-t-lg">
+                    <div className="space-y-1">
+                      <span className="uppercase text-xs font-bold text-blue-700 tracking-widest">{contract.is_recurring ? 'CONTRAT RÉCURRENT' : 'ONE-SHOT'}</span>
+                      <div className="flex items-end gap-2">
+                        <span className="text-3xl font-bold text-indigo-900">{contract.default_goal} RDV</span>
+                        <span className="text-sm text-muted-foreground">/ période</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant="default">{contract.status === 'active' ? 'Actif' : contract.status === 'completed' ? 'Terminé' : 'À venir'}</Badge>
+                        {contract.is_recurring && (
+                          <Badge variant="secondary">{contract.recurrence_every} {contract.recurrence_unit === 'month' ? 'mois' : 'jours'}</Badge>
                         )}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex min-h-[200px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-                    <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
-                      <CalendarDays className="h-10 w-10 text-muted-foreground" />
-                      <h3 className="mt-4 text-lg font-semibold">Aucun contrat</h3>
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        Ce client n'a pas encore de contrat. Créez un contrat pour commencer le suivi.
-                      </p>
-                      <CreateContractDialog
-                        clientId={clientId}
-                        trigger={
-                          <Button className="mt-4">
-                            <Plus className="mr-2 h-4 w-4" />
-                            Créer un contrat
-                          </Button>
-                        }
-                        onSuccess={() => setRefreshKey(prev => prev + 1)}
-                      />
+                    </div>
+                    {/* Illustration SVG décorative */}
+                    <div className="w-32 h-24 flex-shrink-0 flex items-center justify-end">
+                      <svg width="100%" height="100%" viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <ellipse cx="60" cy="40" rx="55" ry="30" fill="#6366F1" fillOpacity="0.12" />
+                        <ellipse cx="80" cy="30" rx="20" ry="10" fill="#6366F1" fillOpacity="0.18" />
+                        <ellipse cx="40" cy="50" rx="15" ry="7" fill="#6366F1" fillOpacity="0.18" />
+                      </svg>
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {clientData && clientData.contracts && clientData.contracts.some(c => c.status === 'active' && c.periods.length > 0) ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Période en cours</CardTitle>
-                  <CardDescription>Suivi de la période actuelle</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {clientData.contracts
-                    .filter(c => c.status === 'active')
-                    .map(contract => {
-                      const activePeriod = contract.periods.find(p => p.status === 'active')
-                      if (!activePeriod) return null
-                      
-                      return (
-                        <div key={activePeriod.id} className="space-y-4">
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <Badge variant="default">En cours</Badge>
-                                <span className="text-sm">
-                                  {formatDate(activePeriod.period_start)} - {formatDate(activePeriod.period_end)}
-                                </span>
-                              </div>
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              {activePeriod.days_remaining} jours restants
-                            </p>
+                  <CardContent className="py-6">
+                    <div className="flex flex-col gap-4 md:gap-6 md:flex-row md:items-center md:justify-between">
+                      <div className="space-y-2 min-w-[220px]">
+                        {/* Récurrence */}
+                        {contract.is_recurring && (
+                          <div className="flex items-center gap-2">
+                            <RepeatIcon className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">Récurrence :</span>
+                            <span className="text-sm ">{contract.recurrence_every} {contract.recurrence_unit === 'month' ? 'mois' : 'jours'}</span>
                           </div>
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-muted-foreground">Progression</span>
-                              <span className="text-sm font-medium">
-                                {activePeriod.rdv_realised} / {activePeriod.goal} RDV
-                              </span>
-                            </div>
-                            <div className="h-2 rounded-full bg-muted overflow-hidden">
-                              <div
-                                className="h-full bg-primary transition-all"
-                                style={{
-                                  width: `${Math.min(
-                                    (activePeriod.rdv_realised / activePeriod.goal) * 100,
-                                    100
-                                  )}%`,
-                                }}
-                              />
-                            </div>
-                            <div className="flex justify-end">
-                              <Badge variant="outline">
-                                {activePeriod.performance_percent}% réalisé
-                              </Badge>
-                            </div>
+                        )}
+                        {/* Période en cours ou à venir */}
+                        {activePeriod && (
+                          <div className="flex items-center gap-2">
+                            <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">Période {activePeriod.status === 'upcoming' ? 'à venir' : 'en cours'} :</span>
+                            <span className="text-sm ">{formatDate(activePeriod.period_start)} - {formatDate(activePeriod.period_end)}</span>
                           </div>
+                        )}
+                        {/* Objectif */}
+                        {activePeriod && (
+                          <div className="flex items-center gap-2">
+                            <Target className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">Objectif : <span className="text-foreground">{activePeriod.goal} RDV</span></span>
+                          </div>
+                        )}
+                      </div>
+                      {/* Progression */}
+                      {activePeriod && (
+                        <div className="flex flex-col items-end gap-2 min-w-[180px]">
+                          <span className="text-sm text-muted-foreground">Progression</span>
+                          <span className="text-lg font-bold">{activePeriod.rdv_realised} / {activePeriod.goal} RDV</span>
+                          <Badge variant="outline">{activePeriod.performance_percent}% réalisé</Badge>
                         </div>
-                      )
-                    })}
-                </CardContent>
-              </Card>
-            ) : clientData && clientData.contracts && clientData.contracts.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Période en cours</CardTitle>
-                  <CardDescription>Aucune période active</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col items-center justify-center py-8 gap-4">
-                    <CalendarDays className="h-8 w-8 text-muted-foreground" />
-                    <div className="text-center">
-                      <p className="text-sm font-medium">Pas de période active</p>
-                      <p className="text-sm text-muted-foreground">
-                        Créez une nouvelle période pour commencer le suivi
-                      </p>
+                      )}
                     </div>
-                    <CreatePeriodDialog
-                      clientId={clientId}
-                      trigger={
-                        <Button>
-                          <Plus className="mr-2 h-4 w-4" />
-                          Créer une période
-                        </Button>
-                      }
-                      onSuccess={() => setRefreshKey(prev => prev + 1)}
-                    />
+                  </CardContent>
+                  <div className="border-t px-6 py-4 flex items-center justify-between bg-muted/50">
+                    {/* Footer : prochaine période si récurrence */}
+                    {contract.is_recurring ? (
+                      <div className="text-xs text-muted-foreground">
+                        Début prochaine période : <span className="font-medium">{nextPeriod ? formatDate(nextPeriod.period_start) : '-'}</span>
+                      </div>
+                    ) : <div />}
+                    <div className="text-xs text-muted-foreground">
+                      Total facturé : <span className="font-medium">$0.00 USD</span>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                  <Button className="absolute top-4 right-4" variant="outline" size="sm">
+                    Gérer le contrat
+                  </Button>
+                </Card>
+              )
+            })()
+          )}
 
           {/* Section Périodes & Objectifs */}
           {clientData?.contracts && clientData.contracts.length > 0 && (

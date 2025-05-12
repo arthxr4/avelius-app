@@ -4,7 +4,9 @@
 
 import { useParams } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Users, Calendar, UserX, TrendingUp, TrendingDown, Eye, FileText } from "lucide-react"
+import { useUser } from "@clerk/nextjs"
+import { useUserData } from "@/lib/hooks/use-user-data"
+import { Users, Calendar, UserX, TrendingUp, TrendingDown, Eye, FileText, ArrowUpRight, ArrowDownRight } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { AppointmentTable } from "@/components/appointment-table"
 import { toast } from "sonner"
@@ -22,7 +24,10 @@ import {
   isWithinInterval, 
   subMonths,
   addDays,
-  differenceInDays
+  differenceInDays,
+  subDays,
+  isAfter,
+  isBefore
 } from "date-fns"
 import { fr } from "date-fns/locale"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -58,6 +63,9 @@ interface DashboardData {
   client?: {
     company: string
   }
+  clientName?: string
+  contract?: any
+  period?: any
 }
 
 function getDateRangeFromType(type: TimeRange): { start: Date; end: Date } {
@@ -91,7 +99,6 @@ function AnalyticsCard({
   value, 
   trend,
   trendValue,
-  description,
   icon: Icon,
   isLoading 
 }: { 
@@ -99,42 +106,28 @@ function AnalyticsCard({
   value: string | number
   trend?: "up" | "down"
   trendValue?: string
-  description?: string
   icon: React.ElementType
   isLoading: boolean
 }) {
+  const trendColor = trend === "up" ? "text-green-600" : trend === "down" ? "text-red-600" : "text-muted-foreground"
+  const TrendIcon = trend === "up" ? ArrowUpRight : trend === "down" ? ArrowDownRight : null
   return (
-    <Card className="@container/card">
-      <CardHeader className="relative">
-        <CardDescription>{title}</CardDescription>
-        <CardTitle className="@[250px]/card:text-3xl text-2xl font-semibold tabular-nums">
-          {isLoading ? <Skeleton className="h-8 w-20" /> : value}
-        </CardTitle>
-        {trendValue && (
-          <div className="absolute right-4 top-4">
-            <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
-              {trend === "up" ? (
-                <TrendingUp className="size-3" />
-              ) : (
-                <TrendingDown className="size-3" />
-              )}
-              {trendValue}
-            </Badge>
+    <Card className="@container/card p-4">
+      <CardHeader className="flex flex-row items-center justify-between p-0 gap-2">
+        <div className="space-y-1">
+          <CardTitle className="text-sm font-medium">{title}</CardTitle>
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold">{isLoading ? <Skeleton className="h-6 w-12" /> : value}</span>
+            {trend && trendValue && TrendIcon && (
+              <span className={`flex items-center gap-1 text-sm font-semibold ${trendColor}`}>
+                <TrendIcon className={`h-4 w-4 ${trendColor}`} />
+                {trendValue}
+              </span>
+            )}
           </div>
-        )}
+        </div>
+        
       </CardHeader>
-      <CardFooter className="flex-col items-start gap-1 text-sm">
-        {description && (
-          <>
-            <div className="line-clamp-1 flex gap-2 font-medium">
-              {description} {trend === "up" ? <TrendingUp className="size-4" /> : <TrendingDown className="size-4" />}
-            </div>
-            <div className="text-muted-foreground">
-              {isLoading ? <Skeleton className="h-4 w-40" /> : "Comparé au mois dernier"}
-            </div>
-          </>
-        )}
-      </CardFooter>
     </Card>
   )
 }
@@ -418,18 +411,77 @@ function ActiveAppointmentsList({ appointments, isLoading }: {
   )
 }
 
+// ProgressCircle composant local
+function ProgressCircle({ percent, label, value, goal }: { percent: number, label: string, value: number, goal: number }) {
+  const radius = 48;
+  const stroke = 8;
+  const normalizedRadius = radius - stroke / 2;
+  const circumference = normalizedRadius * 2 * Math.PI;
+  const progress = Math.min(Math.max(percent, 0), 100);
+  const offset = circumference - (progress / 100) * circumference;
+
+  return (
+    <div className="flex flex-col items-center justify-center gap-2">
+      <svg height={radius * 2} width={radius * 2} className="block">
+        <circle
+          stroke="#e5e7eb"
+          fill="transparent"
+          strokeWidth={stroke}
+          r={normalizedRadius}
+          cx={radius}
+          cy={radius}
+        />
+        <circle
+          stroke="#2563eb"
+          fill="transparent"
+          strokeWidth={stroke}
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          r={normalizedRadius}
+          cx={radius}
+          cy={radius}
+          style={{ transition: 'stroke-dashoffset 0.5s' }}
+        />
+        <text
+          x="50%"
+          y="50%"
+          textAnchor="middle"
+          dy=".3em"
+          fontSize="1.5rem"
+          fill="#2563eb"
+          fontWeight="bold"
+        >
+          {`${progress.toFixed(0)}%`}
+        </text>
+      </svg>
+      <div className="text-center">
+        <div className="text-sm font-medium">{label}</div>
+        <div className="text-xs text-muted-foreground">{value} / {goal} réalisés</div>
+      </div>
+    </div>
+  );
+}
+
 export default function ClientOverview() {
   const params = useParams()
   const clientId = params.id as string
+  const { user: clerkUser, isLoaded: isClerkLoaded } = useUser()
+  const { user, isLoading: isUserDataLoading } = useUserData()
   const [data, setData] = useState<DashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedView, setSelectedView] = useState<"upcoming" | "past">("upcoming")
   const [chartData, setChartData] = useState<{ period: string; appointments: number }[]>([])
+  const today = new Date()
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: new Date(new Date().setMonth(new Date().getMonth() - 1)),
-    to: new Date()
+    from: subDays(today, 6),
+    to: today
   })
+  const [clientName, setClientName] = useState<string>("")
+  const [contract, setContract] = useState<any>(null)
+  const [period, setPeriod] = useState<any>(null)
+  const [periodAppointments, setPeriodAppointments] = useState<number>(0)
 
   const handleDateRangeChange = (range: DateRange | undefined) => {
     setDateRange(range)
@@ -465,6 +517,50 @@ export default function ClientOverview() {
 
         const dashboardData = await response.json()
         setData(dashboardData)
+        setClientName(dashboardData.clientName || "")
+        setContract(dashboardData.contract || null)
+
+        // Sélectionne la période en cours, sinon la plus récente passée, sinon la prochaine à venir
+        let selectedPeriod = null;
+        if (dashboardData.contract && dashboardData.contract.periods && dashboardData.contract.periods.length > 0) {
+          const periods = dashboardData.contract.periods;
+          const today = new Date();
+
+          // 1. Période en cours (today entre start et end)
+          selectedPeriod = periods.find((p: any) => {
+            const start = new Date(p.period_start);
+            const end = new Date(p.period_end);
+            return start <= today && today <= end;
+          });
+
+          // 2. Sinon, la plus récente passée (celle dont end < today, la plus grande)
+          if (!selectedPeriod) {
+            selectedPeriod = periods
+              .filter((p: any) => new Date(p.period_end) < today)
+              .sort((a: any, b: any) => new Date(b.period_end).getTime() - new Date(a.period_end).getTime())[0];
+          }
+
+          // 3. Sinon, la prochaine à venir (celle dont start > today, la plus petite)
+          if (!selectedPeriod) {
+            selectedPeriod = periods
+              .filter((p: any) => new Date(p.period_start) > today)
+              .sort((a: any, b: any) => new Date(a.period_start).getTime() - new Date(b.period_start).getTime())[0];
+          }
+        }
+        setPeriod(selectedPeriod || dashboardData.period || null);
+
+        // Calculer le nombre de RDV réalisés pour cette période
+        if (selectedPeriod && dashboardData.appointments) {
+          const start = new Date(selectedPeriod.period_start);
+          const end = new Date(selectedPeriod.period_end);
+          const rdvRealises = dashboardData.appointments.filter((app: any) => {
+            const created = new Date(app.created_at);
+            return created >= start && created <= end;
+          }).length;
+          setPeriodAppointments(rdvRealises);
+        } else {
+          setPeriodAppointments(0);
+        }
       } catch (err) {
         console.error("Error fetching data:", err)
         setError("Failed to load data. Please try again later.")
@@ -475,6 +571,11 @@ export default function ClientOverview() {
 
     fetchData()
   }, [clientId])
+
+  // Calculer le nom d'affichage comme dans nav-user.tsx
+  const displayName = user 
+    ? `${user.first_name}`
+    : `${clerkUser?.firstName || ""}`
 
   // Si l'ID du client n'est pas disponible, afficher un message d'erreur
   if (!params.id || typeof params.id !== 'string') {
@@ -551,157 +652,264 @@ export default function ClientOverview() {
     }
   ]
 
+  // Placeholder pour la période en cours (à remplacer par la vraie logique plus tard)
+  const currentPeriod = {
+    label: "Objectif période en cours",
+    percent: 65, // à remplacer par la vraie donnée
+    value: 13,   // à remplacer par la vraie donnée
+    goal: 20     // à remplacer par la vraie donnée
+  }
+  const hasCurrentPeriod = true // à remplacer par la vraie logique
+
+  // Prochains rendez-vous (3 max, triés par date croissante)
+  const nextAppointments = (data?.appointments || [])
+    .filter(app => new Date(app.date) > new Date())
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .slice(0, 3)
+
   return (
     <div className="space-y-8 p-6">
-      {/* Welcome Text and Date Range */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Bienvenue Arthur !</h1>
-          <p className="text-muted-foreground mt-1">Voici l'activité générée pour {data?.client?.company || "l'entreprise"}</p>
-        </div>
-        <DateRangePicker
-          date={dateRange}
-          onDateChange={handleDateRangeChange}
-        />
+      {/* Titre de la page en dehors des cards */}
+      <div className="mb-2">
+        <h1 className="text-xl font-bold tracking-tight">
+          Bienvenue {displayName || "l'entreprise"} !
+        </h1>
+        <p className="text-muted-foreground text-sm mb-2">
+          Voici l'activité générée pour {clientName || "l'entreprise"}
+        </p>
       </div>
-
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
-        {/* Main Column */}
-        <div className="space-y-6">
-          {/* KPIs */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <AnalyticsCard
-          title="Total Rendez-vous"
-          value={data?.analytics.totalAppointments || 0}
-          trend="up"
-          trendValue="+12.5%"
-          description="Tendance à la hausse"
-          icon={Calendar}
-          isLoading={isLoading}
-        />
-        <AnalyticsCard
-          title="Total Prospects"
-          value={data?.analytics.totalProspects || 0}
-          trend="down"
-          trendValue="-20%"
-          description="Acquisition en baisse"
-          icon={Users}
-          isLoading={isLoading}
-        />
-        <AnalyticsCard
-          title="Taux de No-Show"
-          value={`${data?.analytics.noShowRate.toFixed(1) || 0}%`}
-          trend="up"
-          trendValue="+12.5%"
-          description="Rétention forte"
-          icon={UserX}
-          isLoading={isLoading}
-        />
-      </div>
-
-          {/* Chart */}
-        <Card>
+      {/* Première ligne : analytics + objectif */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Colonne gauche : analytics + graph + date range picker dans une seule Card */}
+        <div className="flex-1 flex flex-col h-full min-h-[480px]">
+          <Card className="flex flex-col flex-1 h-full min-h-[480px]">
             <CardHeader>
-            <div>
-                <CardTitle>
+              <div className="flex flex-row items-center justify-between gap-4 pb-2">
+                <h2 className="text-xl font-semibold">Statistiques</h2>
+                <DateRangePicker
+                  date={dateRange}
+                  onDateChange={handleDateRangeChange}
+                />
+              </div>
+              {/* KPIs */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 ">
+                <AnalyticsCard
+                  title="Total rendez-vous"
+                  value={data?.analytics.totalAppointments || 0}
+                  trend="up"
+                  trendValue="+12.5%"
+                  icon={Calendar}
+                  isLoading={isLoading}
+                />
+                <AnalyticsCard
+                  title="Total prospects"
+                  value={data?.analytics.totalProspects || 0}
+                  trend="down"
+                  trendValue="-20%"
+                  icon={Users}
+                  isLoading={isLoading}
+                />
+                <AnalyticsCard
+                  title="Taux de no-show"
+                  value={`${data?.analytics.noShowRate?.toFixed(1) || 0}%`}
+                  trend="up"
+                  trendValue="+12.5%"
+                  icon={UserX}
+                  isLoading={isLoading}
+                />
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4 flex-1 flex flex-col justify-end">
+              <div>
+                <CardTitle className="text-base mb-2">
                   Rendez-vous créés {getDateDifference(dateRange) <= 30 ? "par jour" : "par semaine"}
                 </CardTitle>
-              <CardDescription>
-                {chartData.length > 0
+                <CardDescription className="mb-4">
+                  {chartData.length > 0
                     ? `${chartData[0].period} - ${chartData[chartData.length - 1].period}`
-                  : "Chargement..."}
-              </CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-4">
-            {isLoading ? (
-              <div className="h-[250px] w-full">
-                <Skeleton className="h-full w-full" />
-              </div>
-            ) : (
-              <div className="h-[250px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
-                    <CartesianGrid 
-                      strokeDasharray="3 3" 
-                      horizontal={true}
-                      vertical={false}
-                      stroke="hsl(var(--border))"
-                    />
-                    <XAxis
-                        dataKey="period"
-                      tickLine={false}
-                      axisLine={false}
-                      tick={{ fill: "hsl(var(--muted-foreground))" }}
-                      tickMargin={10}
-                      fontSize={12}
-                    />
-                    <YAxis
-                        width={20}
-                      tickLine={false}
-                      axisLine={false}
-                      tick={{ fill: "hsl(var(--muted-foreground))" }}
-                      tickMargin={10}
-                      fontSize={12}
-                      domain={[0, (dataMax: number) => Math.max(dataMax, 5)]}
-                    />
-                    <Tooltip
-                      cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
-                      content={<CustomTooltip />}
-                      wrapperStyle={{ zIndex: 1000 }}
-                    />
-                    <Bar
-                      dataKey="appointments"
-                      fill="#2563eb"
-                      radius={[4, 4, 0, 0]}
-                      maxBarSize={50}
-                      cursor="pointer"
-                      activeBar={{
-                        fill: "#1d4ed8",
-                      }}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </CardContent>
-      </Card>
-
-          {/* Active Appointments - Version plus compacte */}
-        <ActiveAppointmentsList appointments={data?.appointments || []} isLoading={isLoading} />
-      </div>
-
-        {/* Secondary Column */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Accès rapide</CardTitle>
-              <CardDescription>Navigation rapide vers vos pages principales</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {quickLinks.map((link, i) => {
-                  const Icon = link.icon
-                  return (
-                    <a
-                      key={i}
-                      href={link.href}
-                      className="flex items-start space-x-4 rounded-lg border p-4 transition-colors hover:bg-muted"
-                    >
-                      <div className="rounded-lg border p-2">
-                        <Icon className="h-4 w-4" />
-                      </div>
-      <div>
-                        <h3 className="font-medium">{link.title}</h3>
-                        <p className="text-sm text-muted-foreground">{link.description}</p>
-                      </div>
-                    </a>
-                  )
-                })}
+                    : "Chargement..."}
+                </CardDescription>
+                {isLoading ? (
+                  <div className="h-[250px] w-full">
+                    <Skeleton className="h-full w-full" />
+                  </div>
+                ) : (
+                  <div className="h-[250px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartData} margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
+                        <CartesianGrid 
+                          strokeDasharray="3 3" 
+                          horizontal={true}
+                          vertical={false}
+                          stroke="hsl(var(--border))"
+                        />
+                        <XAxis
+                          dataKey="period"
+                          tickLine={false}
+                          axisLine={false}
+                          tick={{ fill: "hsl(var(--muted-foreground))" }}
+                          tickMargin={10}
+                          fontSize={12}
+                        />
+                        <YAxis
+                          width={20}
+                          tickLine={false}
+                          axisLine={false}
+                          tick={{ fill: "hsl(var(--muted-foreground))" }}
+                          tickMargin={10}
+                          fontSize={12}
+                          domain={[0, (dataMax: number) => Math.max(dataMax, 5)]}
+                        />
+                        <Tooltip
+                          cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
+                          content={<CustomTooltip />}
+                          wrapperStyle={{ zIndex: 1000 }}
+                        />
+                        <Bar
+                          dataKey="appointments"
+                          fill="#2563eb"
+                          radius={[4, 4, 0, 0]}
+                          maxBarSize={50}
+                          cursor="pointer"
+                          activeBar={{
+                            fill: "#1d4ed8",
+                          }}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
+        </div>
+        {/* Colonne droite : Contrat puis Objectif */}
+        <div className="w-full lg:w-[340px] flex flex-col gap-4 max-w-md mx-auto h-full min-h-[480px]">
+          {/* Card Contrat */}
+          <Card className="w-full flex-1 flex flex-col min-h-0">
+            <CardHeader className="pb-2 flex-shrink-0">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                Contrat
+                {contract && (
+                  <Badge variant="outline" className="ml-2">
+                    {contract.status === 'active' ? 'Actif' : contract.status === 'completed' ? 'Terminé' : 'À venir'}
+                  </Badge>
+                )}
+              </CardTitle>
+              <CardDescription>
+                {contract ? (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm">Début : {contract.start_date ? format(new Date(contract.start_date), 'dd MMM yyyy', { locale: fr }) : '-'}</span>
+                    {contract.is_recurring && (
+                      <span className="text-sm">Récurrence : {contract.recurrence_every} {contract.recurrence_unit === 'month' ? 'mois' : contract.recurrence_unit === 'week' ? 'semaines' : contract.recurrence_unit === 'day' ? 'jours' : contract.recurrence_unit}</span>
+                    )}
+                    <span className="text-sm">Objectif : {contract.default_goal} RDV / période</span>
+                  </div>
+                ) : (
+                  <span className="text-sm text-muted-foreground">Aucun contrat</span>
+                )}
+              </CardDescription>
+            </CardHeader>
+            {period && (
+              <CardContent className="pt-0 flex-1 flex flex-col justify-end">
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm">Période : {period.period_start ? format(new Date(period.period_start), 'dd MMM yyyy', { locale: fr }) : '-'} - {period.period_end ? format(new Date(period.period_end), 'dd MMM yyyy', { locale: fr }) : '-'}</span>
+                  <span className="text-sm">Objectif période : {period.goal} RDV</span>
+                </div>
+              </CardContent>
+            )}
+          </Card>
+          {/* Card Objectif période en cours (même hauteur que Contrat) */}
+          <Card className="w-full flex-1 flex flex-col min-h-0 h-1/2">
+            <CardHeader className="text-center pb-0 border-none flex-shrink-0">
+              <CardTitle className="text-xl font-semibold mb-4">Objectif période en cours</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center justify-center flex-1">
+              {period ? (
+                <>
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="mb-4">
+                      <ProgressCircle percent={period.goal > 0 ? Math.round((periodAppointments / period.goal) * 100) : 0} label="Objectif" value={periodAppointments} goal={period.goal} />
+                    </div>
+                    <div className="text-muted-foreground text-base font-medium mt-2">
+                      {periodAppointments} / {period.goal} réalisés
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                  <Calendar className="h-10 w-10 mb-2" />
+                  <div className="font-medium">Aucune période active</div>
+                  <div className="text-sm">Créez une période pour suivre la progression de vos objectifs.</div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Deuxième ligne : prochains rendez-vous (pleine largeur) */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Prochains rendez-vous</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {nextAppointments.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+              <Calendar className="h-8 w-8 mb-2" />
+              <div className="font-medium">Aucun rendez-vous à venir</div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {nextAppointments.map((appointment) => (
+                <div key={appointment.id} className="flex items-center gap-3 p-2 rounded-lg border hover:bg-muted transition-colors">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                      {`${appointment.contacts.first_name.charAt(0)}${appointment.contacts.last_name.charAt(0)}`}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">
+                      {appointment.contacts.first_name} {appointment.contacts.last_name}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {format(new Date(appointment.date), "dd MMM yyyy à HH:mm", { locale: fr })}
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Troisième ligne : quick links (pleine largeur) */}
+      <div className="mb-2">
+        <h2 className="text-lg font-semibold mb-1">Accès rapide</h2>
+        <p className="text-muted-foreground text-sm mb-3">Navigation rapide vers vos pages principales</p>
+        <div className="flex flex-col md:flex-row gap-4">
+          {quickLinks.map((link, i) => {
+            const Icon = link.icon;
+            return (
+              <a
+                key={i}
+                href={link.href}
+                className="flex items-center gap-3 rounded-lg border p-4 transition-colors min-w-[220px]"
+                style={{ flex: 1 }}
+              >
+                <div className="rounded-lg bg-muted p-2 flex items-center justify-center">
+                  <Icon className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-base">{link.title}</h3>
+                  <p className="text-sm text-muted-foreground">{link.description}</p>
+                </div>
+              </a>
+            );
+          })}
         </div>
       </div>
     </div>

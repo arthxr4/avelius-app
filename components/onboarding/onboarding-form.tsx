@@ -240,10 +240,10 @@ export function OnboardingForm({ clientId, fields, responses }: OnboardingFormPr
       return "https://calendly.com/votre-lien"
 
     if (label.includes("crm")) 
-      return "Hubspot (API disponible), Compte existant à synchroniser, Champs personnalisés nécessaires: X, Y, Z"
+      return "Hubspot (API disponible), compte existant à synchroniser, champs personnalisés nécessaires: X, Y, Z"
 
     if (label.includes("infos supplémentaires")) 
-      return "Projet de levée de fonds en cours, Ouverture internationale prévue en 2024, Contraintes spécifiques..."
+      return "Projet de levée de fonds en cours, ouverture internationale prévue, contraintes spécifiques..."
 
     // Placeholders par défaut selon le type
     switch (field.type) {
