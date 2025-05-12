@@ -143,26 +143,28 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: true })
 
     let contract = null
+    let periods = []
     if (contracts && contracts.length > 0) {
       contract = contracts.find(c => c.status === 'active')
         || contracts.find(c => c.status === 'upcoming')
         || contracts[0]
-    }
 
-    // --- AJOUT : Récupérer la période en cours/à venir/première du contrat ---
-    let period = null
-    if (contract) {
-      const { data: periods, error: periodsError } = await supabase
+      // Récupérer toutes les périodes du contrat, triées par date de début croissante
+      const { data: allPeriods, error: periodsError } = await supabase
         .from('contract_periods')
         .select('*')
         .eq('contract_id', contract.id)
         .order('period_start', { ascending: true })
+      periods = allPeriods || []
+      contract.periods = periods
+    }
 
-      if (periods && periods.length > 0) {
-        period = periods.find(p => p.status === 'active')
-          || periods.find(p => p.status === 'upcoming')
-          || periods[0]
-      }
+    // Sélectionner la période la plus récente (period_start la plus grande)
+    let period = null
+    if (periods.length > 0) {
+      period = periods.reduce((latest, p) => {
+        return !latest || new Date(p.period_start) > new Date(latest.period_start) ? p : latest
+      }, null)
     }
 
     // Retourner toutes les données

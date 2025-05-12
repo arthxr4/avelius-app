@@ -413,8 +413,8 @@ function ActiveAppointmentsList({ appointments, isLoading }: {
 
 // ProgressCircle composant local
 function ProgressCircle({ percent, label, value, goal }: { percent: number, label: string, value: number, goal: number }) {
-  const radius = 48;
-  const stroke = 8;
+  const radius = 62;
+  const stroke = 10;
   const normalizedRadius = radius - stroke / 2;
   const circumference = normalizedRadius * 2 * Math.PI;
   const progress = Math.min(Math.max(percent, 0), 100);
@@ -441,6 +441,7 @@ function ProgressCircle({ percent, label, value, goal }: { percent: number, labe
           r={normalizedRadius}
           cx={radius}
           cy={radius}
+          transform={`rotate(-90 ${radius} ${radius})`}
           style={{ transition: 'stroke-dashoffset 0.5s' }}
         />
         <text
@@ -448,8 +449,8 @@ function ProgressCircle({ percent, label, value, goal }: { percent: number, labe
           y="50%"
           textAnchor="middle"
           dy=".3em"
-          fontSize="1.5rem"
-          fill="#2563eb"
+          fontSize="1.75rem"
+          fill="hsl(var(--foreground))"
           fontWeight="bold"
         >
           {`${progress.toFixed(0)}%`}
@@ -790,39 +791,32 @@ export default function ClientOverview() {
             <CardHeader className="pb-2 flex-shrink-0">
               <CardTitle className="text-lg font-semibold flex items-center gap-2">
                 Contrat
-                {contract && (
-                  <Badge variant="outline" className="ml-2">
-                    {contract.status === 'active' ? 'Actif' : contract.status === 'completed' ? 'Terminé' : 'À venir'}
-                  </Badge>
-                )}
               </CardTitle>
               <CardDescription>
                 {contract ? (
                   <div className="flex flex-col gap-1">
-                    <span className="text-sm">Début : {contract.start_date ? format(new Date(contract.start_date), 'dd MMM yyyy', { locale: fr }) : '-'}</span>
+                    <span className="text-sm"><span>Début :</span> <span className="text-muted-foreground">{contract.start_date ? format(new Date(contract.start_date), 'dd MMM yyyy', { locale: fr }) : '-'}</span></span>
                     {contract.is_recurring && (
-                      <span className="text-sm">Récurrence : {contract.recurrence_every} {contract.recurrence_unit === 'month' ? 'mois' : contract.recurrence_unit === 'week' ? 'semaines' : contract.recurrence_unit === 'day' ? 'jours' : contract.recurrence_unit}</span>
+                      <span className="text-sm"><span>Récurrence :</span> <span className="text-muted-foreground">{contract.recurrence_every} {contract.recurrence_unit === 'month' ? 'mois' : contract.recurrence_unit === 'week' ? 'semaines' : contract.recurrence_unit === 'day' ? 'jours' : contract.recurrence_unit}</span></span>
                     )}
-                    <span className="text-sm">Objectif : {contract.default_goal} RDV / période</span>
+                    <span className="text-sm"><span>Objectif :</span> <span className="text-muted-foreground">{contract.default_goal} RDV / période</span></span>
                   </div>
                 ) : (
                   <span className="text-sm text-muted-foreground">Aucun contrat</span>
                 )}
               </CardDescription>
             </CardHeader>
-            {period && (
-              <CardContent className="pt-0 flex-1 flex flex-col justify-end">
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm">Période : {period.period_start ? format(new Date(period.period_start), 'dd MMM yyyy', { locale: fr }) : '-'} - {period.period_end ? format(new Date(period.period_end), 'dd MMM yyyy', { locale: fr }) : '-'}</span>
-                  <span className="text-sm">Objectif période : {period.goal} RDV</span>
-                </div>
-              </CardContent>
-            )}
+            
           </Card>
           {/* Card Objectif période en cours (même hauteur que Contrat) */}
           <Card className="w-full flex-1 flex flex-col min-h-0 h-1/2">
             <CardHeader className="text-center pb-0 border-none flex-shrink-0">
-              <CardTitle className="text-xl font-semibold mb-4">Objectif période en cours</CardTitle>
+              <CardTitle className="text-lg font-semibold mb-0">Objectif période en cours</CardTitle>
+              {period && (
+                <CardDescription className="text-sm mb-4">
+                  {format(new Date(period.period_start), 'dd MMM yyyy', { locale: fr })} - {format(new Date(period.period_end), 'dd MMM yyyy', { locale: fr })}
+                </CardDescription>
+              )}
             </CardHeader>
             <CardContent className="flex flex-col items-center justify-center flex-1">
               {period ? (
@@ -831,9 +825,7 @@ export default function ClientOverview() {
                     <div className="mb-4">
                       <ProgressCircle percent={period.goal > 0 ? Math.round((periodAppointments / period.goal) * 100) : 0} label="Objectif" value={periodAppointments} goal={period.goal} />
                     </div>
-                    <div className="text-muted-foreground text-base font-medium mt-2">
-                      {periodAppointments} / {period.goal} réalisés
-                    </div>
+                    
                   </div>
                 </>
               ) : (
