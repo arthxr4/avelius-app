@@ -9,13 +9,31 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { id, client_id, contact_id, status, date } = await req.json()
+    const { id, client_id, contact_id, status, date, contacts } = await req.json()
 
     if (!id || !client_id || !contact_id) {
       return NextResponse.json({ error: "Données requises manquantes" }, { status: 400 })
     }
 
     const supabase = await createServerSupabaseClient()
+
+    // Mettre à jour les infos du contact si fourni
+    if (contacts && (contacts.email || contacts.phone || contacts.company)) {
+      const { error: contactError } = await supabase
+        .from("contacts")
+        .update({
+          email: contacts.email,
+          phone: contacts.phone,
+          company: contacts.company,
+        })
+        .eq("id", contact_id)
+      if (contactError) {
+        return NextResponse.json(
+          { error: "Erreur lors de la mise à jour du contact" },
+          { status: 500 }
+        )
+      }
+    }
 
     // Vérifier d'abord si le rendez-vous existe
     const { data: existingAppointment, error: fetchError } = await supabase
