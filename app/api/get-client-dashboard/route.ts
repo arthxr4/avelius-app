@@ -26,6 +26,18 @@ export async function GET(req: NextRequest) {
       })
     }
 
+    // Récupérer les paramètres de date
+    const from = url.searchParams.get('from')
+    const to = url.searchParams.get('to')
+
+    let fromDate = from ? new Date(from) : subMonths(new Date(), 1)
+    let toDate = to ? new Date(to) : new Date()
+
+    // Calcul de la période précédente (même durée)
+    const durationMs = toDate.getTime() - fromDate.getTime()
+    const prevToDate = new Date(fromDate.getTime() - 1)
+    const prevFromDate = new Date(prevToDate.getTime() - durationMs)
+
     // Créer le client Supabase
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -38,15 +50,17 @@ export async function GET(req: NextRequest) {
       }
     )
 
-    // Récupérer toutes les données en parallèle
+    // Récupérer toutes les données en parallèle pour les deux périodes
     const [
       { data: appointments },
       { data: contacts },
       { data: noShowAppointments },
-      { data: totalAppointments },
-      { data: totalProspects }
+      { data: totalAppointmentsCurrent },
+      { data: totalProspectsCurrent },
+      { data: totalAppointmentsPrev },
+      { data: totalProspectsPrev },
     ] = await Promise.all([
-      // Tous les rendez-vous du client
+      // Tous les rendez-vous du client (pour affichage complet)
       supabase
         .from('appointments')
         .select(`
@@ -69,41 +83,89 @@ export async function GET(req: NextRequest) {
         .eq('client_id', clientId)
         .order('date', { ascending: true }),
 
-      // Tous les contacts du client
+      // Tous les contacts du client (pour affichage complet)
       supabase
         .from('contacts')
         .select('*')
         .eq('client_id', clientId),
 
-      // Rendez-vous "no-show"
+      // Rendez-vous "no-show" sur toute la période (pour affichage complet)
       supabase
         .from('appointments')
         .select('id')
         .eq('client_id', clientId)
         .eq('status', 'no_show'),
 
-      // Total des rendez-vous sur le dernier mois
+      // Total des rendez-vous sur la période sélectionnée
       supabase
         .from('appointments')
         .select('id')
         .eq('client_id', clientId)
-        .gte('created_at', subMonths(new Date(), 1).toISOString()),
+        .gte('created_at', fromDate.toISOString())
+        .lte('created_at', toDate.toISOString()),
 
-      // Total des prospects (contacts) sur le dernier mois
+      // Total des prospects (contacts) sur la période sélectionnée
       supabase
         .from('contacts')
         .select('id')
         .eq('client_id', clientId)
-        .gte('created_at', subMonths(new Date(), 1).toISOString())
+        .gte('created_at', fromDate.toISOString())
+        .lte('created_at', toDate.toISOString()),
+
+      // Total des rendez-vous sur la période précédente
+      supabase
+        .from('appointments')
+        .select('id')
+        .eq('client_id', clientId)
+        .gte('created_at', prevFromDate.toISOString())
+        .lte('created_at', prevToDate.toISOString()),
+
+      // Total des prospects (contacts) sur la période précédente
+      supabase
+        .from('contacts')
+        .select('id')
+        .eq('client_id', clientId)
+        .gte('created_at', prevFromDate.toISOString())
+        .lte('created_at', prevToDate.toISOString()),
     ])
 
-    // Calculer les analytics
+    // Calcul des variations en pourcentage
+    const calcChange = (current: number, previous: number) => {
+      if (previous === 0) return current === 0 ? 0 : 100
+      return ((current - previous) / previous) * 100
+    }
+
+    // Calculer les analytics dynamiques
+    // Filtrer les no-show pour la période courante et précédente
+    const noShowAppointmentsCurrent = appointments?.filter(app => app.status === 'no_show' && new Date(app.created_at) >= fromDate && new Date(app.created_at) <= toDate) || [];
+
     const analytics = {
-      totalAppointments: totalAppointments?.length || 0,
-      totalProspects: totalProspects?.length || 0,
-      noShowRate: noShowAppointments?.length && appointments?.length 
-        ? (noShowAppointments.length / appointments.length) * 100 
-        : 0
+      totalAppointments: {
+        current: totalAppointmentsCurrent?.length || 0,
+        previous: totalAppointmentsPrev?.length || 0,
+        change: calcChange(totalAppointmentsCurrent?.length || 0, totalAppointmentsPrev?.length || 0)
+      },
+      totalProspects: {
+        current: totalProspectsCurrent?.length || 0,
+        previous: totalProspectsPrev?.length || 0,
+        change: calcChange(totalProspectsCurrent?.length || 0, totalProspectsPrev?.length || 0)
+      },
+      noShowRate: {
+        current: (totalAppointmentsCurrent?.length && noShowAppointmentsCurrent?.length)
+          ? (noShowAppointmentsCurrent.length / totalAppointmentsCurrent.length) * 100
+          : 0,
+        previous: (totalAppointmentsPrev?.length && noShowAppointmentsCurrent?.length)
+          ? (noShowAppointmentsCurrent.length / totalAppointmentsPrev.length) * 100
+          : 0,
+        change: calcChange(
+          (totalAppointmentsCurrent?.length && noShowAppointmentsCurrent?.length)
+            ? (noShowAppointmentsCurrent.length / totalAppointmentsCurrent.length) * 100
+            : 0,
+          (totalAppointmentsPrev?.length && noShowAppointmentsCurrent?.length)
+            ? (noShowAppointmentsCurrent.length / totalAppointmentsPrev.length) * 100
+            : 0
+        )
+      }
     }
 
     // Préparer les données pour le graphique

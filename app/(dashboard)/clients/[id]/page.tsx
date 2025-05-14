@@ -508,8 +508,12 @@ export default function ClientOverview() {
         setIsLoading(true)
         setError(null)
 
-        const response = await fetch(`/api/get-client-dashboard?client_id=${clientId}`, {
-          next: { revalidate: 60 }, // Cache pendant 1 minute
+        let url = `/api/get-client-dashboard?client_id=${clientId}`;
+        if (dateRange?.from && dateRange?.to) {
+          url += `&from=${dateRange.from.toISOString()}&to=${dateRange.to.toISOString()}`;
+        }
+        const response = await fetch(url, {
+          next: { revalidate: 60 },
         })
 
         if (!response.ok) {
@@ -571,7 +575,7 @@ export default function ClientOverview() {
     }
 
     fetchData()
-  }, [clientId])
+  }, [clientId, dateRange])
 
   // Calculer le nom d'affichage comme dans nav-user.tsx
   const displayName = user 
@@ -696,25 +700,25 @@ export default function ClientOverview() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 ">
                 <AnalyticsCard
                   title="Total rendez-vous"
-                  value={data?.analytics.totalAppointments || 0}
-                  trend="up"
-                  trendValue="+12.5%"
+                  value={typeof data?.analytics?.totalAppointments === 'object' && data.analytics.totalAppointments !== null ? (data.analytics.totalAppointments as any).current : 0}
+                  trend={typeof data?.analytics?.totalAppointments === 'object' && data.analytics.totalAppointments !== null && typeof (data.analytics.totalAppointments as any).change === 'number' ? ((data.analytics.totalAppointments as any).change > 0 ? 'up' : (data.analytics.totalAppointments as any).change < 0 ? 'down' : undefined) : undefined}
+                  trendValue={typeof data?.analytics?.totalAppointments === 'object' && data.analytics.totalAppointments !== null && typeof (data.analytics.totalAppointments as any).change === 'number' ? `${(data.analytics.totalAppointments as any).change > 0 ? '+' : ''}${(data.analytics.totalAppointments as any).change.toFixed(1)}%` : ''}
                   icon={Calendar}
                   isLoading={isLoading}
                 />
                 <AnalyticsCard
                   title="Total prospects"
-                  value={data?.analytics.totalProspects || 0}
-                  trend="down"
-                  trendValue="-20%"
+                  value={typeof data?.analytics?.totalProspects === 'object' && data.analytics.totalProspects !== null ? (data.analytics.totalProspects as any).current : 0}
+                  trend={typeof data?.analytics?.totalProspects === 'object' && data.analytics.totalProspects !== null && typeof (data.analytics.totalProspects as any).change === 'number' ? ((data.analytics.totalProspects as any).change > 0 ? 'up' : (data.analytics.totalProspects as any).change < 0 ? 'down' : undefined) : undefined}
+                  trendValue={typeof data?.analytics?.totalProspects === 'object' && data.analytics.totalProspects !== null && typeof (data.analytics.totalProspects as any).change === 'number' ? `${(data.analytics.totalProspects as any).change > 0 ? '+' : ''}${(data.analytics.totalProspects as any).change.toFixed(1)}%` : ''}
                   icon={Users}
                   isLoading={isLoading}
                 />
                 <AnalyticsCard
                   title="Taux de no-show"
-                  value={`${data?.analytics.noShowRate?.toFixed(1) || 0}%`}
-                  trend="up"
-                  trendValue="+12.5%"
+                  value={typeof data?.analytics?.noShowRate === 'object' && data.analytics.noShowRate !== null && typeof (data.analytics.noShowRate as any).current === 'number' ? `${(data.analytics.noShowRate as any).current.toFixed(1)}%` : '0%'}
+                  trend={typeof data?.analytics?.noShowRate === 'object' && data.analytics.noShowRate !== null && typeof (data.analytics.noShowRate as any).change === 'number' ? ((data.analytics.noShowRate as any).change > 0 ? 'up' : (data.analytics.noShowRate as any).change < 0 ? 'down' : undefined) : undefined}
+                  trendValue={typeof data?.analytics?.noShowRate === 'object' && data.analytics.noShowRate !== null && typeof (data.analytics.noShowRate as any).change === 'number' ? `${(data.analytics.noShowRate as any).change > 0 ? '+' : ''}${(data.analytics.noShowRate as any).change.toFixed(1)}%` : ''}
                   icon={UserX}
                   isLoading={isLoading}
                 />
