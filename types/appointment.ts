@@ -17,4 +17,5 @@ export type Appointment = {
   added_by: string
   created_at: string
   contacts: Contact
+  notes?: string
 } 

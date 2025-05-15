@@ -23,6 +23,7 @@ import { DateTimePicker } from "@/components/ui/date-time-picker"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import React from "react"
+import { Contact, Appointment } from "@/types/appointment"
 
 const STATUS_OPTIONS = [
   { value: "confirmed", label: "Confirmé" },
@@ -31,24 +32,6 @@ const STATUS_OPTIONS = [
   { value: "reprogrammed", label: "Reporté" },
   { value: "no_show", label: "Non présenté" },
 ]
-
-type Contact = {
-  first_name: string
-  last_name: string
-  email: string
-  phone: string
-  company: string
-}
-
-type Appointment = {
-  id: string
-  client_id: string
-  contact_id: string
-  status: string
-  date: string
-  contacts: Contact
-  notes?: string
-}
 
 interface AppointmentDetailsSheetProps {
   appointment: Appointment | null

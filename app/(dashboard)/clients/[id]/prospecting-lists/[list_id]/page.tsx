@@ -50,6 +50,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { AppointmentDetailsSheet } from "@/components/appointment-details-sheet"
+import { Appointment } from "@/types/appointment"
 
 interface RouteParams {
   id: string
@@ -86,6 +88,8 @@ export default function ProspectingListDetailsPage({ params: paramsPromise }: Pr
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
+  const [selectedContact, setSelectedContact] = React.useState<Contact | null>(null)
+  const [isSheetOpen, setIsSheetOpen] = React.useState(false)
   const { id, list_id } = params
 
   const columns: ColumnDef<Contact>[] = [
@@ -403,7 +407,8 @@ export default function ProspectingListDetailsPage({ params: paramsPromise }: Pr
                       ) {
                         return
                       }
-                      // TODO: Navigate to contact details
+                      setSelectedContact(row.original)
+                      setIsSheetOpen(true)
                     }}
                   >
                     {row.getVisibleCells().map((cell) => (
@@ -507,6 +512,38 @@ export default function ProspectingListDetailsPage({ params: paramsPromise }: Pr
           </div>
         </div>
       </div>
+      <AppointmentDetailsSheet
+        appointment={selectedContact ? {
+          id: selectedContact.id,
+          client_id: id,
+          contact_id: selectedContact.id,
+          session_id: list_id,
+          date: new Date().toISOString(),
+          status: selectedContact.status,
+          added_by: current?.id || "",
+          created_at: new Date().toISOString(),
+          contacts: {
+            id: selectedContact.id,
+            first_name: selectedContact.first_name,
+            last_name: selectedContact.last_name,
+            email: selectedContact.email,
+            phone: selectedContact.phone,
+            company: selectedContact.company
+          }
+        } : null}
+        open={isSheetOpen}
+        onOpenChange={setIsSheetOpen}
+        onUpdate={(updatedAppointment) => {
+          if (!selectedContact) return
+          setContacts(contacts.map(contact => 
+            contact.id === selectedContact.id ? {
+              ...contact,
+              status: updatedAppointment.status,
+              has_appointment: true
+            } : contact
+          ))
+        }}
+      />
     </div>
   )
 }
