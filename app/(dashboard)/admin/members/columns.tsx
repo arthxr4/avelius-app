@@ -18,6 +18,7 @@ import { UpdateRoleDialog } from "@/components/members/update-role-dialog"
 import { toast } from "sonner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { createClient } from "@supabase/supabase-js"
+import Link from "next/link"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -131,6 +132,33 @@ export const columns: ColumnDef<Member>[] = [
     },
   },
   {
+    id: "team",
+    header: () => <span className="text-foreground font-medium">Équipe</span>,
+    cell: ({ row }) => {
+      const clientMembers = row.original.client_members
+      if (!clientMembers || clientMembers.length === 0) {
+        return null
+      }
+      
+      // Prendre le premier client (un utilisateur ne devrait être que dans une seule équipe)
+      const clientId = clientMembers[0]?.client_id
+      const clientName = clientMembers[0]?.clients?.name
+
+      if (!clientId || !clientName) {
+        return null
+      }
+
+      return (
+        <Link 
+          href={`/admin/clients/${clientId}`}
+          className="text-foreground hover:underline"
+        >
+          {clientName}
+        </Link>
+      )
+    },
+  },
+  {
     accessorKey: "role",
     header: () => <span className="text-foreground font-medium">Rôle</span>,
     cell: ({ row }) => {
@@ -144,24 +172,6 @@ export const columns: ColumnDef<Member>[] = [
       return (
         <span className="text-muted-foreground">
           {roleLabels[role] || role}
-        </span>
-      )
-    },
-  },
-  {
-    id: "team",
-    header: () => <span className="text-foreground font-medium">Équipe</span>,
-    cell: ({ row }) => {
-      const clientMembers = row.original.client_members
-      if (!clientMembers || clientMembers.length === 0) {
-        return <span className="text-muted-foreground">-</span>
-      }
-      
-      // Prendre le premier client (un utilisateur ne devrait être que dans une seule équipe)
-      const clientName = clientMembers[0]?.clients?.name
-      return (
-        <span className="text-muted-foreground">
-          {clientName || "-"}
         </span>
       )
     },

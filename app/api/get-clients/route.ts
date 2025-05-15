@@ -18,9 +18,15 @@ export async function GET() {
     .select(`
       *,
       client_members (
+        id,
         user_email,
         users (
-          status
+          first_name,
+          last_name,
+          email,
+          avatar_url,
+          status,
+          last_seen_at
         )
       )
     `)

@@ -805,54 +805,64 @@ export default function ClientOverview() {
         <div className="w-full lg:w-[340px] flex flex-col gap-4 max-w-md mx-auto h-full min-h-[480px]">
           {/* Card Contrat */}
           <Card className="w-full flex-1 flex flex-col min-h-0">
-            <CardHeader className="pb-2 flex-shrink-0">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                Contrat
-              </CardTitle>
-              <CardDescription>
-                {contract ? (
-                  <div className="flex flex-col gap-1">
-                    <span className="text-sm"><span>Début :</span> <span className="text-muted-foreground">{contract.start_date ? format(new Date(contract.start_date), 'dd MMM yyyy', { locale: fr }) : '-'}</span></span>
-                    {contract.is_recurring && (
-                      <span className="text-sm"><span>Récurrence :</span> <span className="text-muted-foreground">{contract.recurrence_every} {contract.recurrence_unit === 'month' ? 'mois' : contract.recurrence_unit === 'week' ? 'semaines' : contract.recurrence_unit === 'day' ? 'jours' : contract.recurrence_unit}</span></span>
-                    )}
-                    <span className="text-sm"><span>Objectif :</span> <span className="text-muted-foreground">{contract.default_goal} RDV / période</span></span>
-                  </div>
-                ) : (
-                  <span className="text-sm text-muted-foreground">Aucun contrat</span>
-                )}
-              </CardDescription>
-            </CardHeader>
-            
+            {contract ? (
+              <>
+                <CardHeader className="pb-2 flex-shrink-0">
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                    Contrat
+                  </CardTitle>
+                  <CardDescription>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm"><span>Début :</span> <span className="text-muted-foreground">{contract.start_date ? format(new Date(contract.start_date), 'dd MMM yyyy', { locale: fr }) : '-'}</span></span>
+                      {contract.is_recurring && (
+                        <span className="text-sm"><span>Récurrence :</span> <span className="text-muted-foreground">{contract.recurrence_every} {contract.recurrence_unit === 'month' ? 'mois' : contract.recurrence_unit === 'week' ? 'semaines' : contract.recurrence_unit === 'day' ? 'jours' : contract.recurrence_unit}</span></span>
+                      )}
+                      <span className="text-sm"><span>Objectif :</span> <span className="text-muted-foreground">{contract.default_goal} RDV / période</span></span>
+                    </div>
+                  </CardDescription>
+                </CardHeader>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center flex-1 py-8 text-center">
+                <div className="rounded-full bg-primary/10 p-3 mb-3">
+                  <FileText className="h-6 w-6 text-primary" />
+                </div>
+                <div className="font-medium mb-1">Aucun contrat actif</div>
+                <div className="text-sm text-muted-foreground max-w-[200px]">
+                  Les détails de votre contrat apparaîtront ici une fois configurés.
+                </div>
+              </div>
+            )}
           </Card>
           {/* Card Objectif période en cours (même hauteur que Contrat) */}
           <Card className="w-full flex-1 flex flex-col min-h-0 h-1/2">
-            <CardHeader className="text-center pb-0 border-none flex-shrink-0">
-              <CardTitle className="text-lg font-semibold mb-0">Objectif période en cours</CardTitle>
-              {period && (
-                <CardDescription className="text-sm mb-4">
-                  {format(new Date(period.period_start), 'dd MMM yyyy', { locale: fr })} - {format(new Date(period.period_end), 'dd MMM yyyy', { locale: fr })}
-                </CardDescription>
-              )}
-            </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center flex-1">
-              {period ? (
-                <>
+            {period ? (
+              <>
+                <CardHeader className="text-center pb-0 border-none flex-shrink-0">
+                  <CardTitle className="text-lg font-semibold mb-0">Objectif période en cours</CardTitle>
+                  <CardDescription className="text-sm mb-4">
+                    {format(new Date(period.period_start), 'dd MMM yyyy', { locale: fr })} - {format(new Date(period.period_end), 'dd MMM yyyy', { locale: fr })}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center justify-center flex-1">
                   <div className="flex flex-col items-center justify-center">
                     <div className="mb-4">
                       <ProgressCircle percent={period.goal > 0 ? Math.round((periodAppointments / period.goal) * 100) : 0} label="Objectif" value={periodAppointments} goal={period.goal} />
                     </div>
-                    
                   </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-                  <Calendar className="h-10 w-10 mb-2" />
-                  <div className="font-medium">Aucune période active</div>
-                  <div className="text-sm">Créez une période pour suivre la progression de vos objectifs.</div>
+                </CardContent>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center flex-1 py-8 text-center">
+                <div className="rounded-full bg-primary/10 p-3 mb-3">
+                  <TrendingUp className="h-6 w-6 text-primary" />
                 </div>
-              )}
-            </CardContent>
+                <div className="font-medium mb-1">Aucune période active</div>
+                <div className="text-sm text-muted-foreground max-w-[200px]">
+                  Vos objectifs et votre progression apparaîtront ici une fois configurés.
+                </div>
+              </div>
+            )}
           </Card>
         </div>
       </div>

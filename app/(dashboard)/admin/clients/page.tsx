@@ -63,6 +63,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Loader2 } from "lucide-react"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 type Client = {
   id: string
@@ -71,6 +77,18 @@ type Client = {
   created_by: string
   status: string
   members_count: number
+  client_members?: {
+    id: string
+    user_email: string
+    users: {
+      first_name: string
+      last_name: string
+      email: string
+      avatar_url: string | null
+      status: string
+      last_seen_at: string | null
+    }
+  }[]
 }
 
 export default function ClientsManagerPage() {
@@ -118,11 +136,10 @@ export default function ClientsManagerPage() {
       cell: ({ row }) => {
         const name = row.getValue("name") as string
         return (
-          <div className="text-sm font-medium pl-0 flex items-center gap-2">
-           
+          <div className="text-sm font-medium pl-0 flex items-center gap-2 text-foreground">
             <div className="flex size-8 items-center justify-center rounded-sm border bg-blue-50 text-blue-600 border-blue-200">
-                      <Building2 className="size-4" />
-                    </div>
+              <Building2 className="size-4" />
+            </div>
             {name}
           </div>
         )
@@ -148,11 +165,59 @@ export default function ClientsManagerPage() {
           </div>
         )
       },
-      cell: ({ row }) => (
-        <div className="text-sm font-normal">
-          {row.getValue("members_count") || 0}
-        </div>
-      ),
+      cell: ({ row }) => {
+        const members = row.original.client_members || []
+        const formatLastSeen = (date: string | null) => {
+          if (!date) return "Jamais"
+          const lastSeen = new Date(date)
+          const now = new Date()
+          const diffInMinutes = Math.floor((now.getTime() - lastSeen.getTime()) / (1000 * 60))
+          
+          if (diffInMinutes < 1) return "À l'instant"
+          if (diffInMinutes < 60) return `Il y a ${diffInMinutes} min`
+          if (diffInMinutes < 1440) return `Il y a ${Math.floor(diffInMinutes / 60)}h`
+          return `Il y a ${Math.floor(diffInMinutes / 1440)}j`
+        }
+
+        return (
+          <div className="flex -space-x-2">
+            <TooltipProvider>
+              {members.map((member) => (
+                <Tooltip key={member.id}>
+                  <TooltipTrigger asChild>
+                    <div className="relative">
+                      {member.users.avatar_url ? (
+                        <img
+                          src={member.users.avatar_url}
+                          alt={`${member.users.first_name} ${member.users.last_name}`}
+                          className="h-8 w-8 rounded-full border-2 border-background"
+                        />
+                      ) : (
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-muted">
+                          <span className="text-xs font-medium">
+                            {`${member.users.first_name?.[0] || ''}${member.users.last_name?.[0] || ''}`}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="space-y-1">
+                      <p className="font-medium text-background">{`${member.users.first_name} ${member.users.last_name}`}</p>
+                      <p className="text-xs text-muted-foreground">{member.users.email}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{member.users.status === "active" ? "Actif" : "En attente"}</span>
+                        <span>•</span>
+                        <span>{formatLastSeen(member.users.last_seen_at)}</span>
+                      </div>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </TooltipProvider>
+          </div>
+        )
+      },
     },
     {
       accessorKey: "status",
@@ -271,7 +336,8 @@ export default function ClientsManagerPage() {
         if (!membersCountResponse.ok) throw new Error("Failed to fetch members count")
         const enrichedData = clientsData.map((client: Client) => ({
           ...client,
-          members_count: membersCountData[client.id] || 0
+          members_count: membersCountData[client.id] || 0,
+          client_members: client.client_members || []
         }))
         setData(enrichedData)
       } catch (error) {
@@ -522,7 +588,7 @@ export default function ClientsManagerPage() {
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
-                      className="h-10 px-2 text-left text-sm font-normal text-muted-foreground bg-background bg-muted [&:has([role=checkbox])]:px-0 [&:has([role=checkbox])]:text-center [&:has([role=checkbox])]:border-r-0 [&>[role=checkbox]]:translate-y-[2px]"
+                      className="h-10 px-2 text-left text-sm font-normal text-foreground bg-background bg-muted [&:has([role=checkbox])]:px-0 [&:has([role=checkbox])]:text-center [&:has([role=checkbox])]:border-r-0 [&>[role=checkbox]]:translate-y-[2px]"
                     >
                       {header.isPlaceholder
                         ? null
@@ -557,7 +623,7 @@ export default function ClientsManagerPage() {
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}
-                        className="p-2 align-middle text-sm font-normal [&:has([role=checkbox])]:px-0 [&:has([role=checkbox])]:text-center [&:has([role=checkbox])]:border-r-0 [&>[role=checkbox]]:translate-y-[2px]"
+                        className="p-2 align-middle text-sm font-normal text-muted-foreground [&:has([role=checkbox])]:px-0 [&:has([role=checkbox])]:text-center [&:has([role=checkbox])]:border-r-0 [&>[role=checkbox]]:translate-y-[2px]"
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>

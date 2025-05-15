@@ -40,6 +40,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[]
   onRowsSelected?: (rows: Member[]) => void
   searchQuery: string
+  defaultSorting?: { id: string; desc: boolean }[]
 }
 
 export function DataTable<TData, TValue>({
@@ -47,8 +48,9 @@ export function DataTable<TData, TValue>({
   data,
   onRowsSelected,
   searchQuery,
+  defaultSorting,
 }: DataTableProps<TData, TValue>) {
-  const [sorting, setSorting] = React.useState<SortingState>([])
+  const [sorting, setSorting] = React.useState<SortingState>(defaultSorting || [])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
 

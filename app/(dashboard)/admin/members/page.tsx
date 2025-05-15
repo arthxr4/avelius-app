@@ -133,14 +133,24 @@ export default function MembersPage() {
           {isLoading ? (
             <MembersTableSkeleton />
           ) : (
-            <DataTable columns={columnsWithRefresh} data={activeMembers} searchQuery={searchQuery} />
+            <DataTable 
+              columns={columnsWithRefresh} 
+              data={activeMembers} 
+              searchQuery={searchQuery}
+              defaultSorting={[{ id: "last_seen_at", desc: true }]}
+            />
           )}
         </TabsContent>
         <TabsContent value="pending" className="space-y-2">
           {isLoading ? (
             <MembersTableSkeleton />
           ) : (
-            <DataTable columns={columnsWithRefresh} data={pendingMembers} searchQuery={searchQuery} />
+            <DataTable 
+              columns={columnsWithRefresh} 
+              data={pendingMembers} 
+              searchQuery={searchQuery}
+              defaultSorting={[{ id: "last_seen_at", desc: true }]}
+            />
           )}
         </TabsContent>
       </Tabs>
