@@ -209,7 +209,7 @@ export default function ProspectingListsPage() {
           <div>
             <h1 className="text-lg font-semibold">Listes de prospection</h1>
           <p className="text-sm text-muted-foreground">
-            Gérez vos listes de prospects et suivez leur progression
+            Gérez vos listes de prospects
           </p>
         </div>
           <CreateProspectingListDialog clientId={current.id} onCreated={() => {
