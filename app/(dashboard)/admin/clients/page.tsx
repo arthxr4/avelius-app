@@ -180,7 +180,7 @@ export default function ClientsManagerPage() {
         }
 
         return (
-          <div className="flex -space-x-2">
+          <div className="flex -space-x-3">
             <TooltipProvider>
               {members.map((member) => (
                 <Tooltip key={member.id}>

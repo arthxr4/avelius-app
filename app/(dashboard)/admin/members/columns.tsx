@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, UserCog, Trash2, Circle, Clock, XCircle, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react"
+import { MoreHorizontal, UserCog, Trash2, Circle, Clock, XCircle, CheckCircle2, ChevronDown, ChevronUp, Building2 } from "lucide-react"
 import { format, formatDistanceToNow } from "date-fns"
 import { fr } from "date-fns/locale"
 import { UpdateRoleDialog } from "@/components/members/update-role-dialog"
@@ -151,8 +151,11 @@ export const columns: ColumnDef<Member>[] = [
       return (
         <Link 
           href={`/admin/clients/${clientId}`}
-          className="text-foreground hover:underline"
+          className="text-foreground text-sm font-medium hover:underline flex items-center gap-2"
         >
+          <div className="flex size-6 items-center justify-center rounded-sm border bg-blue-50 text-blue-600 border-blue-200">
+                      <Building2 className="size-3" />
+                    </div>
           {clientName}
         </Link>
       )
