@@ -107,7 +107,7 @@ export function DataTable<TData, TValue>({
             </SelectContent>
           </Select>
       </div>
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-hidden">
         <Table>
           <TableHeader className="bg-muted">
             <TableRow>

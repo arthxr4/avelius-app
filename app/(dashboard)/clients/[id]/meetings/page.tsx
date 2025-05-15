@@ -372,9 +372,9 @@ export function AppointmentTable({
     <div className="space-y-4 ">
       {(isLoading || table.getRowModel().rows?.length > 0) && (
         <>
-          <div className=" overflow-hidden">
+           <div className="rounded-md border overflow-hidden">
             <Table>
-              <TableHeader className="">
+              <TableHeader className="bg-muted">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header) => {
@@ -643,7 +643,7 @@ export default function MeetingsPage() {
         <div className="">
           <h1 className="text-xl font-bold">Rendez-vous</h1>
           <p className="text-sm text-muted-foreground">
-            Planifiez et gérez les rendez-vous avec vos contacts
+            Planifiez et gérez les rendez-vous avec vos prospects
           </p>
         </div>
         <AddAppointmentDialog 

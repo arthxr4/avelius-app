@@ -1,6 +1,6 @@
 import { format } from "date-fns"
 import { fr } from "date-fns/locale"
-import { CalendarIcon, MapPin, User, Briefcase, Mail, Phone, Loader2 } from "lucide-react"
+import { CalendarIcon, MapPin, User, Briefcase, Mail, Phone, Loader2, MessageCirclePlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Sheet,
@@ -79,14 +79,17 @@ function InlineEditableField({
     }
   }
 
+  const sharedClass =
+    "w-full rounded-md border border-transparent bg-transparent px-2 py-1 text-sm min-h-[32px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors"
+
   return (
-    <div className="space-y-3 mb-2">
-      <Label className="text-muted-foreground">{label}</Label>
+    <div className="flex flex-col gap-3 mb-2">
+      <Label className="text-muted-foreground pl-2">{label}</Label>
       {editing ? (
         <input
           ref={inputRef}
           type={type}
-          className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className={sharedClass}
           value={inputValue}
           onChange={e => setInputValue(e.target.value)}
           onBlur={handleSave}
@@ -99,14 +102,92 @@ function InlineEditableField({
       ) : (
         <div
           className={
-            "min-h-[24px] text-sm cursor-pointer " +
-            (value ? "text-foreground" : "text-muted-foreground")
+            sharedClass +
+            " cursor-pointer select-text border hover:bg-muted transition-colors " +
+            (value ? "text-foreground" : "text-muted-foreground italic")
           }
           onClick={() => setEditing(true)}
         >
           {value || placeholder}
         </div>
       )}
+    </div>
+  )
+}
+
+function InlineEditableTextarea({
+  value,
+  placeholder = "Ajoutez des notes sur ce prospect...",
+  onSave,
+}: {
+  value: string
+  placeholder?: string
+  onSave: (val: string) => void
+}) {
+  const [editing, setEditing] = React.useState(value === "")
+  const [inputValue, setInputValue] = React.useState(value || "")
+  const textareaRef = React.useRef<HTMLTextAreaElement | null>(null)
+
+  React.useEffect(() => {
+    if (editing && textareaRef.current) {
+      textareaRef.current.focus()
+    }
+  }, [editing])
+
+  React.useEffect(() => {
+    setInputValue(value || "")
+    if (value === "") setEditing(true)
+  }, [value])
+
+  const handleSave = () => {
+    if (inputValue.trim() === "") {
+      setEditing(true)
+    } else {
+      setEditing(false)
+    }
+    if (inputValue !== value) {
+      onSave(inputValue)
+    }
+  }
+
+  if (editing) {
+    return (
+      <div>
+        <textarea
+          ref={textareaRef}
+          className="w-full min-h-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          placeholder={placeholder}
+          value={inputValue}
+          onChange={e => setInputValue(e.target.value)}
+          onBlur={handleSave}
+          onKeyDown={e => {
+            if (e.key === "Escape") setEditing(false)
+            if ((e.key === "Enter" && (e.ctrlKey || e.metaKey))) handleSave()
+          }}
+        />
+        {(!inputValue || inputValue.trim() === "") && (
+          <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+            <MessageCirclePlus className="w-12 h-12 mb-2 opacity-60" />
+            <div className="font-semibold text-xl text-foreground">Ajouter une note</div>
+            <div className="text-sm text-muted-foreground">Ajoutez ici toute information pertinente sur ce contact</div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className={
+        "min-h-[24px] text-sm whitespace-pre-line cursor-pointer rounded-md px-2 py-1 " +
+        (value ? "text-foreground" : "text-muted-foreground border border-dashed border-input")
+      }
+      onClick={() => setEditing(true)}
+      tabIndex={0}
+      role="button"
+      aria-label="Edit notes"
+    >
+      {value || placeholder}
     </div>
   )
 }
@@ -122,6 +203,8 @@ export function AppointmentDetailsSheet({
   const [notes, setNotes] = useState(appointment?.notes || "")
   const [isUpdating, setIsUpdating] = useState(false)
   const [contactFields, setContactFields] = useState({
+    first_name: appointment?.contacts.first_name || "",
+    last_name: appointment?.contacts.last_name || "",
     email: appointment?.contacts.email || "",
     phone: appointment?.contacts.phone || "",
     company: appointment?.contacts.company || "",
@@ -133,6 +216,8 @@ export function AppointmentDetailsSheet({
       setStatus(appointment.status)
       setNotes(appointment.notes || "")
       setContactFields({
+        first_name: appointment.contacts.first_name || "",
+        last_name: appointment.contacts.last_name || "",
         email: appointment.contacts.email || "",
         phone: appointment.contacts.phone || "",
         company: appointment.contacts.company || "",
@@ -146,6 +231,8 @@ export function AppointmentDetailsSheet({
     selectedDate?.toISOString() !== new Date(appointment.date).toISOString() ||
     status !== appointment.status ||
     notes !== (appointment.notes || "") ||
+    contactFields.first_name !== appointment.contacts.first_name ||
+    contactFields.last_name !== appointment.contacts.last_name ||
     contactFields.email !== appointment.contacts.email ||
     contactFields.phone !== appointment.contacts.phone ||
     contactFields.company !== appointment.contacts.company
@@ -174,6 +261,8 @@ export function AppointmentDetailsSheet({
           notes,
           contacts: {
             ...appointment.contacts,
+            first_name: contactFields.first_name,
+            last_name: contactFields.last_name,
             email: contactFields.email,
             phone: contactFields.phone,
             company: contactFields.company,
@@ -189,6 +278,8 @@ export function AppointmentDetailsSheet({
           notes,
           contacts: {
             ...appointment.contacts,
+            first_name: contactFields.first_name,
+            last_name: contactFields.last_name,
             email: contactFields.email,
             phone: contactFields.phone,
             company: contactFields.company,
@@ -210,26 +301,31 @@ export function AppointmentDetailsSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-[400px] sm:w-[540px]">
+      <SheetContent className="w-[500px] sm:w-[700px] sm:max-w-xl">
         <SheetHeader className="space-y-1">
-          <SheetTitle>Détails du rendez-vous</SheetTitle>
+          <SheetTitle>Détails</SheetTitle>
         </SheetHeader>
 
         {/* Contact Info Section */}
         <div className="mt-6 space-y-4">
           <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-muted">
-              <span className="text-sm font-medium">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-background border border-foreground">
+              <span className="text-xl font-semibold">
                 {appointment.contacts.first_name[0]}
-                {appointment.contacts.last_name[0]}
+                
               </span>
             </div>
             <div>
-              <div className="font-medium text-lg">
+              <div className="font-semibold text-xl">
                 {appointment.contacts.first_name} {appointment.contacts.last_name}
               </div>
-              <div className="text-sm text-muted-foreground font-medium">
-                {capitalize(appointment.contacts.company)}
+              <div className="text-sm text-muted-foreground font-normal ">
+                <span className="inline-flex items-center gap-2">
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm bg-background border border-muted-foreground text-foreground font-bold text-[9px]">
+                    {appointment.contacts.company ? appointment.contacts.company[0].toUpperCase() : ""}
+                  </span>
+                  <span className="underline underline-offset-4">{capitalize(appointment.contacts.company)}</span>
+                </span>
               </div>
             </div>
           </div>
@@ -237,20 +333,35 @@ export function AppointmentDetailsSheet({
 
         <Tabs defaultValue="details" className="mt-6">
           <TabsList className="w-full">
-            <TabsTrigger value="details" className="group flex items-center gap-2 text-muted-foreground data-[state=active]:text-blue-600 hover:text-foreground transition-colors pb-3">
+            <TabsTrigger value="details" className="group flex items-center gap-2 text-muted-foreground data-[state=active]:text-blue-600 hover:text-foreground transition-colors pb-2">
               Détails
             </TabsTrigger>
-            <TabsTrigger value="meetings" className="group flex items-center gap-2 text-muted-foreground data-[state=active]:text-blue-600 hover:text-foreground transition-colors pb-3">
+            <TabsTrigger value="meetings" className="group flex items-center gap-2 text-muted-foreground data-[state=active]:text-blue-600 hover:text-foreground transition-colors pb-2">
               Rendez-vous
             </TabsTrigger>
-            <TabsTrigger value="notes" className="group flex items-center gap-2 text-muted-foreground data-[state=active]:text-blue-600 hover:text-foreground transition-colors pb-3">
+            <TabsTrigger value="notes" className="group flex items-center gap-2 text-muted-foreground data-[state=active]:text-blue-600 hover:text-foreground transition-colors pb-2">
               Notes
+              <span className="rounded bg-muted text-muted-foreground group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-600 px-1.5 py-0.5 text-xs transition-colors">
+                {notes && notes.trim() !== "" ? 1 : 0}
+              </span>
             </TabsTrigger>
           </TabsList>
           <div className="mb-4" />
           <TabsContent value="details">
-            <div className="space-y-6">
+            <div className="space-y-6 pt-2">
               {/* Champs du contact en style image */}
+              <InlineEditableField
+                label="Prénom"
+                value={contactFields.first_name}
+                onSave={val => setContactFields(f => ({ ...f, first_name: val }))}
+                placeholder="Ajouter un prénom"
+              />
+              <InlineEditableField
+                label="Nom"
+                value={contactFields.last_name}
+                onSave={val => setContactFields(f => ({ ...f, last_name: val }))}
+                placeholder="Ajouter un nom"
+              />
               <InlineEditableField
                 label="Email"
                 value={contactFields.email}
@@ -303,12 +414,10 @@ export function AppointmentDetailsSheet({
             <div className="space-y-4">
               <div className="space-y-3">
                 <Label className="text-muted-foreground">Notes</Label>
-                <textarea
-                  id="notes"
-                  className="w-full min-h-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="Ajoutez des notes sur ce prospect..."
+                <InlineEditableTextarea
                   value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
+                  onSave={setNotes}
+                  placeholder="Ajoutez des notes sur ce prospect..."
                 />
               </div>
             </div>

@@ -9,7 +9,7 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { id, client_id, contact_id, status, date, contacts } = await req.json()
+    const { id, client_id, contact_id, status, date, contacts, notes } = await req.json()
 
     if (!id || !client_id || !contact_id) {
       return NextResponse.json({ error: "Données requises manquantes" }, { status: 400 })
@@ -18,14 +18,20 @@ export async function PATCH(req: Request) {
     const supabase = await createServerSupabaseClient()
 
     // Mettre à jour les infos du contact si fourni
-    if (contacts && (contacts.email || contacts.phone || contacts.company)) {
+    if (contacts && (contacts.email || contacts.phone || contacts.company || contacts.first_name || contacts.last_name || typeof notes !== 'undefined')) {
+      const updateContactFields: any = {
+        email: contacts.email,
+        phone: contacts.phone,
+        company: contacts.company,
+        first_name: contacts.first_name,
+        last_name: contacts.last_name,
+      }
+      if (typeof notes !== 'undefined') {
+        updateContactFields.notes = notes
+      }
       const { error: contactError } = await supabase
         .from("contacts")
-        .update({
-          email: contacts.email,
-          phone: contacts.phone,
-          company: contacts.company,
-        })
+        .update(updateContactFields)
         .eq("id", contact_id)
       if (contactError) {
         return NextResponse.json(
@@ -62,21 +68,19 @@ export async function PATCH(req: Request) {
       .eq("client_id", client_id.toString())
       .select()
 
+    // DEBUG: log data et error pour comprendre le retour
+    console.log("[update-appointment] data:", data)
+    console.log("[update-appointment] error:", error)
+
     if (error) {
       return NextResponse.json(
-        { error: "Erreur lors de la mise à jour du rendez-vous" },
+        { error: "Erreur lors de la mise à jour du rendez-vous", details: error, data },
         { status: 500 }
       )
     }
 
-    if (!data || data.length === 0) {
-      return NextResponse.json(
-        { error: "Aucun rendez-vous mis à jour" },
-        { status: 404 }
-      )
-    }
-
-    return NextResponse.json(data[0])
+    // Pour debug, retourne tout
+    return NextResponse.json({ success: true, data, error })
   } catch (error) {
     return NextResponse.json(
       { error: "Erreur lors de la mise à jour du rendez-vous" },
