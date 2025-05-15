@@ -104,9 +104,9 @@ export default function MembersPage() {
     <div className="space-y-4 p-2 sm:py-4 lg:px-6 pb-20 md:pb-4">
       <div className="flex items-center justify-between">
         <div className="">
-          <h1 className="text-xl font-bold">Équipe interne</h1>
+          <h1 className="text-xl font-bold">Utilisateurs</h1>
           <p className="text-sm text-muted-foreground">
-            Gestion des membres internes à Avelius
+            Gestion de tous les utilisateurs de la plateforme
           </p>
         </div>
         

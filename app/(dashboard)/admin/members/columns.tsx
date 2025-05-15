@@ -39,6 +39,12 @@ export type Member = {
   avatar_url: string | null
   clerk_image_url?: string
   last_seen_at: string | null
+  client_members?: {
+    client_id: string
+    clients: {
+      name: string
+    }
+  }[]
 }
 
 const userStatusConfig = {
@@ -138,6 +144,24 @@ export const columns: ColumnDef<Member>[] = [
       return (
         <span className="text-muted-foreground">
           {roleLabels[role] || role}
+        </span>
+      )
+    },
+  },
+  {
+    id: "team",
+    header: () => <span className="text-foreground font-medium">Équipe</span>,
+    cell: ({ row }) => {
+      const clientMembers = row.original.client_members
+      if (!clientMembers || clientMembers.length === 0) {
+        return <span className="text-muted-foreground">-</span>
+      }
+      
+      // Prendre le premier client (un utilisateur ne devrait être que dans une seule équipe)
+      const clientName = clientMembers[0]?.clients?.name
+      return (
+        <span className="text-muted-foreground">
+          {clientName || "-"}
         </span>
       )
     },

@@ -15,8 +15,22 @@ export async function GET() {
 
   const { data: users, error } = await supabase
     .from("users")
-    .select("id, first_name, last_name, email, role, avatar_url, last_seen_at")
-    .in("role", ["admin", "agent"])
+    .select(`
+      id, 
+      first_name, 
+      last_name, 
+      email, 
+      role, 
+      avatar_url, 
+      last_seen_at,
+      client_members (
+        client_id,
+        clients (
+          name
+        )
+      )
+    `)
+    .in("role", ["admin", "agent", "manager"])
 
   if (error) {
     console.error("Error fetching members:", error.message)

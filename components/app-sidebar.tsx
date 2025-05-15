@@ -86,7 +86,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: Briefcase,
     },
     {
-      name: "Équipe interne",
+      name: "Utilisateurs",
       url: "/admin/members",
       icon: Users2,
     },

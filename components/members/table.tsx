@@ -101,6 +101,7 @@ export function DataTable<TData, TValue>({
               <SelectItem value="all">Tous les rôles</SelectItem>
               <SelectItem value="admin">Admin</SelectItem>
               <SelectItem value="agent">Agent</SelectItem>
+              <SelectItem value="manager">Manager</SelectItem>
             </SelectContent>
           </Select>
       </div>
