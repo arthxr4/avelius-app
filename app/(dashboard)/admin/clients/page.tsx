@@ -522,7 +522,7 @@ export default function ClientsManagerPage() {
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
-                      className="h-10 px-2 text-left text-sm font-normal text-muted-foreground bg-background [&:has([role=checkbox])]:px-0 [&:has([role=checkbox])]:text-center [&:has([role=checkbox])]:border-r-0 [&>[role=checkbox]]:translate-y-[2px]"
+                      className="h-10 px-2 text-left text-sm font-normal text-muted-foreground bg-background bg-muted [&:has([role=checkbox])]:px-0 [&:has([role=checkbox])]:text-center [&:has([role=checkbox])]:border-r-0 [&>[role=checkbox]]:translate-y-[2px]"
                     >
                       {header.isPlaceholder
                         ? null
