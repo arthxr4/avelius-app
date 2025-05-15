@@ -36,6 +36,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { CreatePeriodDialog } from "@/components/clients/create-period-dialog"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 
 interface ContractPeriod {
   id: string;
@@ -104,6 +107,8 @@ export default function ClientPage() {
   const [newGoal, setNewGoal] = useState<number>(0)
   const [isDeletingPeriod, setIsDeletingPeriod] = useState(false)
   const [isEditingPeriod, setIsEditingPeriod] = useState(false)
+  const [newStartDate, setNewStartDate] = useState<Date | undefined>(undefined)
+  const [newEndDate, setNewEndDate] = useState<Date | undefined>(undefined)
 
   useEffect(() => {
     const fetchClientData = async () => {
@@ -136,6 +141,14 @@ export default function ClientPage() {
       console.error('Erreur de formatage de date:', error)
       return 'Date invalide'
     }
+  }
+
+  // Fonction utilitaire pour formater une date en YYYY-MM-DD (local, sans UTC)
+  function toLocalDateString(date: Date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -253,7 +266,7 @@ export default function ClientPage() {
   }
 
   const handleEditPeriod = async () => {
-    if (!periodToEdit || !newGoal) return
+    if (!periodToEdit || !newGoal || !newStartDate || !newEndDate) return
     setIsEditingPeriod(true)
 
     try {
@@ -265,17 +278,19 @@ export default function ClientPage() {
         body: JSON.stringify({
           periodId: periodToEdit.id,
           goal: newGoal,
+          period_start: toLocalDateString(newStartDate),
+          period_end: toLocalDateString(newEndDate),
         }),
       })
 
       if (!response.ok) throw new Error('Failed to update period')
 
-      toast.success('Objectif mis à jour avec succès')
+      toast.success('Période mise à jour avec succès')
       setPeriodToEdit(null)
       setRefreshKey(prev => prev + 1)
     } catch (error) {
       console.error('Error updating period:', error)
-      toast.error("Erreur lors de la mise à jour de l'objectif")
+      toast.error("Erreur lors de la mise à jour de la période")
     } finally {
       setIsEditingPeriod(false)
     }
@@ -514,10 +529,12 @@ export default function ClientPage() {
                                       onClick={() => {
                                         setPeriodToEdit(period)
                                         setNewGoal(period.goal)
+                                        setNewStartDate(period.period_start ? new Date(period.period_start) : undefined)
+                                        setNewEndDate(period.period_end ? new Date(period.period_end) : undefined)
                                       }}
                                     >
                                       <Pencil className="mr-2 h-4 w-4" />
-                                      Modifier l'objectif
+                                      Modifier la période
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                       onClick={() => setPeriodToDelete(period)}
@@ -668,19 +685,19 @@ export default function ClientPage() {
             </DialogContent>
           </Dialog>
 
-          {/* Dialog de modification de l'objectif */}
+          {/* Dialog de modification de la période */}
           <Dialog open={!!periodToEdit} onOpenChange={(open) => !open && setPeriodToEdit(null)}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Modifier l'objectif</DialogTitle>
+                <DialogTitle>Modifier la période</DialogTitle>
                 <DialogDescription>
-                  Modifiez l'objectif de RDV pour la période du {formatDate(periodToEdit?.period_start)} au {formatDate(periodToEdit?.period_end)}.
+                  Modifiez les détails de la période.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="space-y-2">
                   <label htmlFor="goal" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                    Nouvel objectif
+                    Objectif de RDV
                   </label>
                   <Input
                     id="goal"
@@ -689,6 +706,60 @@ export default function ClientPage() {
                     onChange={(e) => setNewGoal(parseInt(e.target.value))}
                     min={1}
                   />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Date de début
+                  </label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !newStartDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarDays className="mr-2 h-4 w-4" />
+                        {newStartDate ? format(newStartDate, "PPP", { locale: fr }) : "Sélectionner une date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={newStartDate}
+                        onSelect={setNewStartDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Date de fin
+                  </label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !newEndDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarDays className="mr-2 h-4 w-4" />
+                        {newEndDate ? format(newEndDate, "PPP", { locale: fr }) : "Sélectionner une date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={newEndDate}
+                        onSelect={setNewEndDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
               <DialogFooter className="gap-2 sm:gap-0">
@@ -703,7 +774,7 @@ export default function ClientPage() {
                 <Button
                   onClick={handleEditPeriod}
                   className="w-full sm:w-auto"
-                  disabled={isEditingPeriod || !newGoal || newGoal < 1}
+                  disabled={isEditingPeriod || !newGoal || !newStartDate || !newEndDate || newGoal < 1}
                 >
                   {isEditingPeriod ? (
                     <>

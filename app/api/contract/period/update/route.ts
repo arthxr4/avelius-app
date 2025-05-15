@@ -20,9 +20,9 @@ export async function PATCH(req: NextRequest) {
     )
 
     // Récupérer les données du body
-    const { periodId, goal } = await req.json()
+    const { periodId, goal, period_start, period_end } = await req.json()
 
-    if (!periodId || !goal || goal < 1) {
+    if (!periodId || !goal || goal < 1 || !period_start || !period_end) {
       return new Response(JSON.stringify({ error: 'Invalid input' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
@@ -34,6 +34,8 @@ export async function PATCH(req: NextRequest) {
       .from('contract_periods')
       .update({ 
         goal,
+        period_start,
+        period_end,
         updated_at: new Date().toISOString()
       })
       .eq('id', periodId)
