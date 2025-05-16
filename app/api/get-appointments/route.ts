@@ -34,7 +34,15 @@ export async function GET(req: Request) {
         last_name,
         email,
         phone,
-        company
+        company,
+        id,
+        notes:contact_notes(
+          id,
+          content,
+          user_id,
+          created_at,
+          updated_at
+        )
       )
     `)
     .eq("client_id", client_id)

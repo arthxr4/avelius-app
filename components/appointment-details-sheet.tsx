@@ -1,6 +1,6 @@
-import { format } from "date-fns"
+import { format, formatDistanceToNow } from "date-fns"
 import { fr } from "date-fns/locale"
-import { CalendarIcon, MapPin, User, Briefcase, Mail, Phone, Loader2, MessageCirclePlus } from "lucide-react"
+import { CalendarIcon, MapPin, User, Briefcase, Mail, Phone, Loader2, MessageCirclePlus, MoreHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Sheet,
@@ -24,6 +24,12 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import React from "react"
 import { Contact, Appointment } from "@/types/appointment"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu"
 
 const STATUS_OPTIONS = [
   { value: "confirmed", label: "Confirmé" },
@@ -200,7 +206,6 @@ export function AppointmentDetailsSheet({
 }: AppointmentDetailsSheetProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [status, setStatus] = useState(appointment?.status || "")
-  const [notes, setNotes] = useState(appointment?.notes || "")
   const [isUpdating, setIsUpdating] = useState(false)
   const [contactFields, setContactFields] = useState({
     first_name: appointment?.contacts.first_name || "",
@@ -209,12 +214,15 @@ export function AppointmentDetailsSheet({
     phone: appointment?.contacts.phone || "",
     company: appointment?.contacts.company || "",
   })
+  const [contactDetails, setContactDetails] = useState<any>(null)
+  const [loadingDetails, setLoadingDetails] = useState(false)
+  const [newNote, setNewNote] = useState("")
+  const [addingNote, setAddingNote] = useState(false)
 
   useEffect(() => {
     if (appointment) {
       setSelectedDate(new Date(appointment.date))
       setStatus(appointment.status)
-      setNotes(appointment.notes || "")
       setContactFields({
         first_name: appointment.contacts.first_name || "",
         last_name: appointment.contacts.last_name || "",
@@ -225,12 +233,24 @@ export function AppointmentDetailsSheet({
     }
   }, [appointment])
 
+  // Fetch contact details (contact, notes, appointments)
+  useEffect(() => {
+    const fetchDetails = async () => {
+      if (!appointment?.contacts?.id) return
+      setLoadingDetails(true)
+      const res = await fetch(`/api/contact/get?id=${appointment.contacts.id}`)
+      const data = await res.json()
+      setContactDetails(data)
+      setLoadingDetails(false)
+    }
+    fetchDetails()
+  }, [appointment?.contacts?.id])
+
   if (!appointment) return null
 
   const hasChanges = 
     selectedDate?.toISOString() !== new Date(appointment.date).toISOString() ||
     status !== appointment.status ||
-    notes !== (appointment.notes || "") ||
     contactFields.first_name !== appointment.contacts.first_name ||
     contactFields.last_name !== appointment.contacts.last_name ||
     contactFields.email !== appointment.contacts.email ||
@@ -258,7 +278,6 @@ export function AppointmentDetailsSheet({
           contact_id: appointment.contact_id,
           date: selectedDate.toISOString(),
           status,
-          notes,
           contacts: {
             ...appointment.contacts,
             first_name: contactFields.first_name,
@@ -275,7 +294,6 @@ export function AppointmentDetailsSheet({
           ...appointment,
           date: selectedDate.toISOString(),
           status,
-          notes,
           contacts: {
             ...appointment.contacts,
             first_name: contactFields.first_name,
@@ -298,6 +316,35 @@ export function AppointmentDetailsSheet({
       setIsUpdating(false)
     }
   }
+
+  // Ajout d'une note via API
+  const handleAddNote = async () => {
+    if (!newNote.trim() || !appointment?.contacts?.id) return
+    setAddingNote(true)
+    const response = await fetch("/api/add-contact-note", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contact_id: appointment.contacts.id,
+        content: newNote.trim(),
+      }),
+    })
+    if (response.ok) {
+      setNewNote("")
+      // Refetch contact details pour rafraîchir les notes
+      const res = await fetch(`/api/contact/get?id=${appointment.contacts.id}`)
+      const data = await res.json()
+      setContactDetails(data)
+    } else {
+      toast.error("Erreur lors de l'ajout de la note")
+    }
+    setAddingNote(false)
+  }
+
+  // Utilisation des données fetchées
+  const contact = contactDetails?.contact || appointment.contacts
+  const notes = contactDetails?.notes || []
+  const appointments = contactDetails?.appointments || []
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -342,7 +389,7 @@ export function AppointmentDetailsSheet({
             <TabsTrigger value="notes" className="group flex items-center gap-2 text-muted-foreground data-[state=active]:text-blue-600 hover:text-foreground transition-colors pb-2">
               Notes
               <span className="rounded bg-muted text-muted-foreground group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-600 px-1.5 py-0.5 text-xs transition-colors">
-                {notes && notes.trim() !== "" ? 1 : 0}
+                {notes.length}
               </span>
             </TabsTrigger>
           </TabsList>
@@ -413,13 +460,75 @@ export function AppointmentDetailsSheet({
           <TabsContent value="notes">
             <div className="space-y-4">
               <div className="space-y-3">
-                <Label className="text-muted-foreground">Notes</Label>
-                <InlineEditableTextarea
-                  value={notes}
-                  onSave={setNotes}
-                  placeholder="Ajoutez des notes sur ce prospect..."
+                <Label className="text-muted-foreground">Ajouter un commentaire</Label>
+                <textarea
+                  className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder="Ajoutez un commentaire..."
+                  value={newNote}
+                  onChange={e => setNewNote(e.target.value)}
+                  disabled={addingNote}
                 />
+                <div className="flex justify-end">
+                  <Button size="sm" onClick={handleAddNote} disabled={addingNote || !newNote.trim()}>
+                    {addingNote ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : null}
+                    Ajouter
+                  </Button>
+                </div>
               </div>
+              <Separator />
+              {loadingDetails ? (
+                <div className="flex justify-center py-8"><Loader2 className="animate-spin w-6 h-6 text-muted-foreground" /></div>
+              ) : notes.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                  <MessageCirclePlus className="w-12 h-12 mb-2 opacity-60" />
+                  <div className="font-semibold text-xl text-foreground">Aucune note</div>
+                  <div className="text-sm text-muted-foreground">Ajoutez ici des commentaires sur ce contact</div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {notes.map((note: any) => (
+                    <div key={note.id} className="group flex items-start gap-3 px-3 py-2 relative">
+                      {/* Avatar */}
+                      {note.users?.avatar_url ? (
+                        <img
+                          src={note.users.avatar_url}
+                          alt={note.users.first_name || 'Avatar'}
+                          className="h-9 w-9 rounded-full object-cover bg-muted"
+                        />
+                      ) : (
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-foreground font-semibold text-base">
+                          {note.users?.first_name ? note.users.first_name[0].toUpperCase() : (note.user_id ? note.user_id[0].toUpperCase() : 'U')}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm truncate">
+                            {note.users ? `${note.users.first_name} ${note.users.last_name}` : note.user_id || 'Utilisateur'}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {note.created_at ? formatDistanceToNow(new Date(note.created_at), { addSuffix: true, locale: fr }) : ''}
+                          </span>
+                        </div>
+                        <div className="whitespace-pre-line text-sm text-foreground mt-1">{note.content}</div>
+                      </div>
+                      {/* 3 dots dropdown, visible au hover */}
+                      <div className="absolute right-2 top-2 hidden group-hover:flex">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="p-1 rounded-full hover:bg-muted focus:outline-none">
+                              <MoreHorizontal className="w-5 h-5 text-muted-foreground" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem /* onClick={...} */>Modifier</DropdownMenuItem>
+                            <DropdownMenuItem /* onClick={...} */ className="text-destructive">Supprimer</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>
