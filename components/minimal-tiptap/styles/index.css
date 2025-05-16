@@ -1,0 +1,78 @@
+/* Minimal Tiptap One styles (inspirés du repo shadcn-minimal-tiptap) */
+
+.minimal-tiptap-editor {
+  min-height: 6rem;
+  padding: 1rem;
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  font-size: 0.875rem; /* text-sm */
+  background: transparent;
+  caret-color: #111;
+}
+
+.minimal-tiptap-editor:focus {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.minimal-tiptap-editor:focus-visible {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.minimal-tiptap-editor p {
+  margin: 0;
+}
+
+.minimal-tiptap-editor strong {
+  font-weight: 600;
+}
+
+.minimal-tiptap-editor em {
+  font-style: italic;
+}
+
+.minimal-tiptap-editor u {
+  text-decoration: underline;
+}
+
+.minimal-tiptap-editor code {
+  background: #f4f4f5;
+  color: #d7263d;
+  border-radius: 4px;
+  padding: 0.1em 0.3em;
+  font-size: 0.95em;
+}
+
+.minimal-tiptap-editor a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+/* Bubble menu styles */
+[data-tippy-root] .tippy-box {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.minimal-tiptap-editor .tiptap-placeholder {
+  color: #a3a3a3;
+  pointer-events: none;
+  user-select: none;
+  opacity: 1;
+}
+
+.minimal-tiptap-editor > p.is-editor-empty:before {
+  content: attr(data-placeholder);
+  pointer-events: none;
+  float: left;
+  height: 0;
+  color: #a3a3a3;
+  opacity: 1;
+  user-select: none;
+} 

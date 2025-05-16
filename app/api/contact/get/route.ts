@@ -26,7 +26,7 @@ export async function GET(req: Request) {
   // Récupérer les notes du contact
   const { data: notes, error: notesError } = await supabase
     .from("contact_notes")
-    .select("*, users: user_id (id, first_name, last_name, avatar_url)")
+    .select("*, edit, users: user_id (id, first_name, last_name, avatar_url)")
     .eq("contact_id", contact_id)
     .order("created_at", { ascending: false })
   if (notesError) {

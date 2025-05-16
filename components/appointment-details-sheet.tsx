@@ -30,6 +30,16 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { Switch } from "@/components/ui/switch"
+import { Bold, Italic, Underline as UnderlineIcon, Quote, List, ListOrdered, Link as LinkIcon, Paperclip } from "lucide-react"
+import { useEditor, EditorContent } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import Underline from '@tiptap/extension-underline'
+import LinkExtension from '@tiptap/extension-link'
+import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor"
+import MinimalTiptapOne from "@/components/minimal-tiptap/MinimalTiptapOne"
+import { useUser } from "@clerk/nextjs"
 
 const STATUS_OPTIONS = [
   { value: "confirmed", label: "Confirmé" },
@@ -198,6 +208,17 @@ function InlineEditableTextarea({
   )
 }
 
+function isEditorContentEmpty(html: string) {
+  if (!html) return true
+  // Supprime les balises vides, espaces, <br>, etc.
+  const cleaned = html
+    .replace(/<br\s*\/?>(\s*)/gi, '')
+    .replace(/<p>\s*<\/p>/gi, '')
+    .replace(/<[^>]+>/g, '') // retire toutes les balises
+    .replace(/\s+/g, '')
+  return cleaned.length === 0
+}
+
 export function AppointmentDetailsSheet({
   appointment,
   open,
@@ -218,6 +239,24 @@ export function AppointmentDetailsSheet({
   const [loadingDetails, setLoadingDetails] = useState(false)
   const [newNote, setNewNote] = useState("")
   const [addingNote, setAddingNote] = useState(false)
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
+  const [editingContent, setEditingContent] = useState<string>('')
+  const [savingEdit, setSavingEdit] = useState(false)
+  const { user } = useUser()
+  const currentUserId = user?.id
+
+  // TipTap editor for note input
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Underline,
+      LinkExtension,
+    ],
+    content: '',
+    onUpdate: ({ editor }) => {
+      setNewNote(editor.getHTML())
+    },
+  })
 
   useEffect(() => {
     if (appointment) {
@@ -321,7 +360,7 @@ export function AppointmentDetailsSheet({
   const handleAddNote = async () => {
     if (!newNote.trim() || !appointment?.contacts?.id) return
     setAddingNote(true)
-    const response = await fetch("/api/add-contact-note", {
+    const response = await fetch("/api/contact-note/create", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -331,6 +370,7 @@ export function AppointmentDetailsSheet({
     })
     if (response.ok) {
       setNewNote("")
+      editor?.commands.setContent('')
       // Refetch contact details pour rafraîchir les notes
       const res = await fetch(`/api/contact/get?id=${appointment.contacts.id}`)
       const data = await res.json()
@@ -341,6 +381,29 @@ export function AppointmentDetailsSheet({
     setAddingNote(false)
   }
 
+  // Suppression d'une note via API
+  const handleDeleteNote = async (noteId: string) => {
+    if (!noteId) return
+    try {
+      const response = await fetch('/api/contact-note/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note_id: noteId }),
+      })
+      if (response.ok) {
+        // Refetch notes
+        const res = await fetch(`/api/contact/get?id=${appointment.contacts.id}`)
+        const data = await res.json()
+        setContactDetails(data)
+        toast.success('Note supprimée')
+      } else {
+        toast.error("Erreur lors de la suppression de la note")
+      }
+    } catch (e) {
+      toast.error("Erreur lors de la suppression de la note")
+    }
+  }
+
   // Utilisation des données fetchées
   const contact = contactDetails?.contact || appointment.contacts
   const notes = contactDetails?.notes || []
@@ -348,7 +411,7 @@ export function AppointmentDetailsSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-[500px] sm:w-[700px] sm:max-w-xl">
+      <SheetContent className="w-[500px] sm:w-[700px] sm:max-w-xl flex flex-col h-full">
         <SheetHeader className="space-y-1">
           <SheetTitle>Détails</SheetTitle>
         </SheetHeader>
@@ -378,162 +441,236 @@ export function AppointmentDetailsSheet({
           </div>
         </div>
 
-        <Tabs defaultValue="details" className="mt-6">
-          <TabsList className="w-full">
-            <TabsTrigger value="details" className="group flex items-center gap-2 text-muted-foreground data-[state=active]:text-blue-600 hover:text-foreground transition-colors pb-2">
-              Détails
-            </TabsTrigger>
-            <TabsTrigger value="meetings" className="group flex items-center gap-2 text-muted-foreground data-[state=active]:text-blue-600 hover:text-foreground transition-colors pb-2">
-              Rendez-vous
-            </TabsTrigger>
-            <TabsTrigger value="notes" className="group flex items-center gap-2 text-muted-foreground data-[state=active]:text-blue-600 hover:text-foreground transition-colors pb-2">
-              Notes
-              <span className="rounded bg-muted text-muted-foreground group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-600 px-1.5 py-0.5 text-xs transition-colors">
-                {notes.length}
-              </span>
-            </TabsTrigger>
-          </TabsList>
-          <div className="mb-4" />
-          <TabsContent value="details">
-            <div className="space-y-6 pt-2">
-              {/* Champs du contact en style image */}
-              <InlineEditableField
-                label="Prénom"
-                value={contactFields.first_name}
-                onSave={val => setContactFields(f => ({ ...f, first_name: val }))}
-                placeholder="Ajouter un prénom"
-              />
-              <InlineEditableField
-                label="Nom"
-                value={contactFields.last_name}
-                onSave={val => setContactFields(f => ({ ...f, last_name: val }))}
-                placeholder="Ajouter un nom"
-              />
-              <InlineEditableField
-                label="Email"
-                value={contactFields.email}
-                onSave={val => setContactFields(f => ({ ...f, email: val }))}
-                type="email"
-                placeholder="Ajouter un email"
-              />
-              <InlineEditableField
-                label="Téléphone"
-                value={contactFields.phone}
-                onSave={val => setContactFields(f => ({ ...f, phone: val }))}
-                type="tel"
-                placeholder="Ajouter un téléphone"
-              />
-              <InlineEditableField
-                label="Entreprise"
-                value={contactFields.company}
-                onSave={val => setContactFields(f => ({ ...f, company: val }))}
-                placeholder="Ajouter une entreprise"
-              />
-            </div>
-          </TabsContent>
-          <TabsContent value="meetings">
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <Label className="text-muted-foreground">Date et heure</Label>
-                <DateTimePicker 
-                  date={selectedDate} 
-                  onSelect={(newDate) => newDate && setSelectedDate(newDate)}
+        <div className="flex-1 min-h-0 overflow-y-auto mt-6">
+          <Tabs defaultValue="details">
+            <TabsList className="w-full sticky top-0 bg-background z-10">
+              <TabsTrigger value="details" className="group flex items-center gap-2 text-muted-foreground data-[state=active]:text-blue-600 hover:text-foreground transition-colors pb-2">
+                Détails
+              </TabsTrigger>
+              <TabsTrigger value="meetings" className="group flex items-center gap-2 text-muted-foreground data-[state=active]:text-blue-600 hover:text-foreground transition-colors pb-2">
+                Rendez-vous
+              </TabsTrigger>
+              <TabsTrigger value="notes" className="group flex items-center gap-2 text-muted-foreground data-[state=active]:text-blue-600 hover:text-foreground transition-colors pb-2">
+                Notes
+                <span className="rounded bg-muted text-muted-foreground group-data-[state=active]:bg-blue-100 group-data-[state=active]:text-blue-600 px-1.5 py-0.5 text-xs transition-colors">
+                  {notes.length}
+                </span>
+              </TabsTrigger>
+            </TabsList>
+            <div className="mb-4" />
+            <TabsContent value="details">
+              <div className="space-y-6 pt-2">
+                {/* Champs du contact en style image */}
+                <InlineEditableField
+                  label="Prénom"
+                  value={contactFields.first_name}
+                  onSave={val => setContactFields(f => ({ ...f, first_name: val }))}
+                  placeholder="Ajouter un prénom"
+                />
+                <InlineEditableField
+                  label="Nom"
+                  value={contactFields.last_name}
+                  onSave={val => setContactFields(f => ({ ...f, last_name: val }))}
+                  placeholder="Ajouter un nom"
+                />
+                <InlineEditableField
+                  label="Email"
+                  value={contactFields.email}
+                  onSave={val => setContactFields(f => ({ ...f, email: val }))}
+                  type="email"
+                  placeholder="Ajouter un email"
+                />
+                <InlineEditableField
+                  label="Téléphone"
+                  value={contactFields.phone}
+                  onSave={val => setContactFields(f => ({ ...f, phone: val }))}
+                  type="tel"
+                  placeholder="Ajouter un téléphone"
+                />
+                <InlineEditableField
+                  label="Entreprise"
+                  value={contactFields.company}
+                  onSave={val => setContactFields(f => ({ ...f, company: val }))}
+                  placeholder="Ajouter une entreprise"
                 />
               </div>
-              <div className="space-y-3">
-                <Label className="text-muted-foreground">Statut</Label>
-                <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </TabsContent>
-          <TabsContent value="notes">
-            <div className="space-y-4">
-              <div className="space-y-3">
-                <Label className="text-muted-foreground">Ajouter un commentaire</Label>
-                <textarea
-                  className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="Ajoutez un commentaire..."
-                  value={newNote}
-                  onChange={e => setNewNote(e.target.value)}
-                  disabled={addingNote}
-                />
-                <div className="flex justify-end">
-                  <Button size="sm" onClick={handleAddNote} disabled={addingNote || !newNote.trim()}>
-                    {addingNote ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : null}
-                    Ajouter
-                  </Button>
+            </TabsContent>
+            <TabsContent value="meetings">
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <Label className="text-muted-foreground">Date et heure</Label>
+                  <DateTimePicker 
+                    date={selectedDate} 
+                    onSelect={(newDate) => newDate && setSelectedDate(newDate)}
+                  />
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-muted-foreground">Statut</Label>
+                  <Select value={status} onValueChange={setStatus}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUS_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-              <Separator />
-              {loadingDetails ? (
-                <div className="flex justify-center py-8"><Loader2 className="animate-spin w-6 h-6 text-muted-foreground" /></div>
-              ) : notes.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-                  <MessageCirclePlus className="w-12 h-12 mb-2 opacity-60" />
-                  <div className="font-semibold text-xl text-foreground">Aucune note</div>
-                  <div className="text-sm text-muted-foreground">Ajoutez ici des commentaires sur ce contact</div>
+            </TabsContent>
+            <TabsContent value="notes">
+              <div className="flex flex-col h-full min-h-0 space-y-4">
+                <div className="flex flex-col">
+                  <MinimalTiptapOne
+                    value={newNote}
+                    onChange={setNewNote}
+                    placeholder="Ajoutez une note..."
+                    editorClassName="minimal-tiptap-editor focus:outline-none px-5 py-4 h-full"
+                    editable={true}
+                    actionButton={
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleAddNote}
+                        disabled={addingNote || isEditorContentEmpty(newNote)}
+                      >
+                        {addingNote ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : null}
+                        Ajouter une note
+                      </Button>
+                    }
+                  />
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {notes.map((note: any) => (
-                    <div key={note.id} className="group flex items-start gap-3 px-3 py-2 relative">
-                      {/* Avatar */}
-                      {note.users?.avatar_url ? (
-                        <img
-                          src={note.users.avatar_url}
-                          alt={note.users.first_name || 'Avatar'}
-                          className="h-9 w-9 rounded-full object-cover bg-muted"
-                        />
-                      ) : (
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-foreground font-semibold text-base">
-                          {note.users?.first_name ? note.users.first_name[0].toUpperCase() : (note.user_id ? note.user_id[0].toUpperCase() : 'U')}
+                {loadingDetails ? (
+                  <div className="flex justify-center py-8"><Loader2 className="animate-spin w-6 h-6 text-muted-foreground" /></div>
+                ) : notes.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                    <MessageCirclePlus className="w-12 h-12 mb-2 opacity-60" />
+                    <div className="font-semibold text-xl text-foreground">Aucune note</div>
+                    <div className="text-sm text-muted-foreground">Ajoutez ici des commentaires sur ce contact</div>
+                  </div>
+                ) : (
+                  <div className="flex-1 min-h-0 max-h-full overflow-y-auto pb-16">
+                    {notes.map((note: any, idx: number) => {
+                      const isEditing = editingNoteId === note.id
+                      return (
+                        <div key={note.id} className="group flex items-start gap-3 px-3 py-4 pb-0 relative">
+                          {/* Avatar */}
+                          {note.users?.avatar_url ? (
+                            <img
+                              src={note.users.avatar_url}
+                              alt={note.users.first_name || 'Avatar'}
+                              className="h-8 w-8 rounded-full object-cover bg-muted"
+                            />
+                          ) : (
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-foreground font-semibold text-base">
+                              {note.users?.first_name ? note.users.first_name[0].toUpperCase() : (note.user_id ? note.user_id[0].toUpperCase() : 'U')}
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm truncate">
+                                {note.users ? `${note.users.first_name} ${note.users.last_name}` : note.user_id || 'Utilisateur'}
+                              </span>
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                {note.created_at ? formatDistanceToNow(new Date(note.created_at), { addSuffix: true, locale: fr }) : ''}
+                                {note.edit && <span className="">(modifié)</span>}
+                              </span>
+                            </div>
+                            {isEditing ? (
+                              <div className="relative mt-1">
+                                <MinimalTiptapOne
+                                  value={editingContent}
+                                  onChange={setEditingContent}
+                                  placeholder="Modifier la note..."
+                                  editorClassName="minimal-tiptap-editor focus:outline-none px-5 py-4 h-full"
+                                  editable={true}
+                                  actionButton={
+                                    <div className="flex items-center justify-end gap-2 w-full">
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => setEditingNoteId(null)}
+                                        disabled={savingEdit}
+                                      >
+                                        Annuler
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        onClick={async () => {
+                                          setSavingEdit(true)
+                                          await fetch('/api/contact-note/update', {
+                                            method: 'PATCH',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                              note_id: note.id,
+                                              content: editingContent,
+                                            }),
+                                          })
+                                          // Refetch notes
+                                          const res = await fetch(`/api/contact/get?id=${appointment.contacts.id}`)
+                                          const data = await res.json()
+                                          setContactDetails(data)
+                                          setEditingNoteId(null)
+                                          setSavingEdit(false)
+                                        }}
+                                        disabled={savingEdit || isEditorContentEmpty(editingContent)}
+                                      >
+                                        {savingEdit ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : null}
+                                        Enregistrer
+                                      </Button>
+                                      
+                                    </div>
+                                  }
+                                />
+                              </div>
+                            ) : (
+                              <div
+                                className={
+                                  "prose prose-sm max-w-none text-foreground mt-1 pb-4 text-sm " +
+                                  (idx !== notes.length - 1 ? "border-b" : "")
+                                }
+                                dangerouslySetInnerHTML={{ __html: note.content }}
+                              />
+                            )}
+                          </div>
+                          {/* 3 dots dropdown, visible au hover */}
+                          {note.user_id === currentUserId && (
+                            <div className="absolute right-2 top-2 flex items-center">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 opacity-0 group-hover:opacity-100 focus:opacity-100 data-[state=open]:opacity-100 transition"
+                                    aria-label="Ouvrir le menu"
+                                    disabled={isEditing}
+                                  >
+                                    <MoreHorizontal className="w-5 h-5" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => {
+                                    setEditingNoteId(note.id)
+                                    setEditingContent(note.content)
+                                  }}>Modifier</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleDeleteNote(note.id)} className="text-destructive focus:bg-destructive/10 focus:text-destructive hover:bg-destructive/10 hover:text-destructive">Supprimer</DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          )}
                         </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm truncate">
-                            {note.users ? `${note.users.first_name} ${note.users.last_name}` : note.user_id || 'Utilisateur'}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {note.created_at ? formatDistanceToNow(new Date(note.created_at), { addSuffix: true, locale: fr }) : ''}
-                          </span>
-                        </div>
-                        <div className="whitespace-pre-line text-sm text-foreground mt-1">{note.content}</div>
-                      </div>
-                      {/* 3 dots dropdown, visible au hover */}
-                      <div className="absolute right-2 top-2 hidden group-hover:flex">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className="p-1 rounded-full hover:bg-muted focus:outline-none">
-                              <MoreHorizontal className="w-5 h-5 text-muted-foreground" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem /* onClick={...} */>Modifier</DropdownMenuItem>
-                            <DropdownMenuItem /* onClick={...} */ className="text-destructive">Supprimer</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </TabsContent>
-        </Tabs>
+                      )})}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-6 bg-muted/50 border-t">
+        <div className="absolute bottom-0 left-0 right-0 p-6 bg-muted border-t">
           <div className="flex justify-end gap-2">
             <Button
               variant="ghost"
